@@ -7,6 +7,7 @@ from __future__ import print_function
 import abc
 from collections import namedtuple
 
+import numpy as np
 import tensorflow as tf
 
 LCWithErr = namedtuple("LCWithErr", ["times", "values", "error"])
@@ -46,11 +47,11 @@ class Model(object):
 class SineModel(Model):
     """Sine wave model."""
 
-    def __init__(self, period_init, phase_init, amp_init, const_init):
+    def __init__(self, lc_with_err, period_init, phase_init, amp_init):
         self.period_init = period_init
         self.phase_init = phase_init
         self.amp_init = amp_init
-        self.const_init = const_init
+        self.const_init = tf.constant(np.mean(lc_with_err.values))
         self.period = tf.get_variable("period", dtype=tf.float64,
                                       initializer=period_init)
         self.phase = tf.get_variable("phase", dtype=tf.float64,
@@ -58,15 +59,32 @@ class SineModel(Model):
         self.amp = tf.get_variable("amplitude", dtype=tf.float64,
                                    initializer=amp_init)
         self.const_factor = tf.get_variable("const", dtype=tf.float64,
-                                            initializer=const_init)
+                                            initializer=self.const_init)
 
-    def parameter_values(self, session):
+    def parameter_values(self, session, normalize=True):
+        amp, period, phase = session.run([self.amp, self.period, self.phase])
+        if normalize:
+            if amp < 0:
+                amp = -amp
+                period = -period
+                phase = -phase
+            if period < 0:
+                period = -period
+                phase = np.pi - phase
+            while phase < 0:
+                phase += 2 * np.pi
+            while phase > 2 * np.pi:
+                phase -= 2 * np.pi
         return {
-            'period': session.run(self.period),
-            'phase': session.run(self.phase),
-            'amp': session.run(self.amp),
+            'period': period,
+            'phase': phase,
+            'amp': amp,
             'const': session.run(self.const_factor)
         }
+
+    def format_params(self, params):
+        return (
+            "{amp} * sin({period} * x + {phase}) + {const}".format(**params))
 
     def log_probs(self, lc_with_err):
         predicted = (
@@ -87,7 +105,8 @@ class Solver(object):
         """
         self.model_fn = model_fn
 
-    def get_params(self, lc_with_err, learning_rate=1e-2, steps=1000):
+    def get_params(self, lc_with_err, learning_rate=1e-2, steps=1000,
+                   random_restarts=1):
         """Gets matching model parameters.
 
         :param lc_with_err: Light curve.
@@ -112,21 +131,28 @@ class Solver(object):
                 opt = tf.train.AdamOptimizer(learning_rate=learning_rate_tensor)
                 train_op = opt.minimize(-mean_log_prob, global_step=global_step)
 
-                # Initialize and solve.
-                sess.run(tf.global_variables_initializer())
+                global_var_init = tf.global_variables_initializer()
 
-                # print("After init")
-                # print(model.parameter_values(sess))
-                # print("logprob", sess.run(mean_log_prob))
-                # print("logprob vector", sess.run(log_probs))
+                def run_random_restart():
+                    sess.run(global_var_init)
 
-                for _ in xrange(steps):
-                    sess.run(train_op)
+                    # print("After init")
+                    # print(model.parameter_values(sess))
+                    # print("logprob", sess.run(mean_log_prob))
+                    # print("logprob sum", sum(sess.run(log_probs)))
+                    # print("Step", sess.run(global_step))
 
-                # print("After training")
-                # print(model.parameter_values(sess))
-                # print("logprob", sess.run(mean_log_prob))
-                # print("logprob vector", sess.run(log_probs))
+                    for _ in xrange(steps):
+                        sess.run(train_op)
 
-                final_logprobs = sess.run(log_probs)
-                return final_logprobs, model.parameter_values(sess)
+                    # print("After training")
+                    # print(model.parameter_values(sess))
+                    # print("logprob", sess.run(mean_log_prob))
+                    # print("logprob sum", sum(sess.run(log_probs)))
+                    final_logprobs = sess.run(log_probs)
+                    params = model.parameter_values(sess)
+                    return sess.run(loss), final_logprobs, params
+
+                best_score, best_probs, best_params = min(
+                    run_random_restart() for _ in xrange(random_restarts))
+                return best_probs, best_params
