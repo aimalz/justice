@@ -38,11 +38,10 @@ def transform(lc, deltax, deltay, stretchx, stretchy):
 def make_dataset(num_obj, def_cadence, cls_models, cls_params, cls_wts=None):
     num_cls = len(cls_models)
     lcs = []
-    truth = np.random.choice(range(num_cls), num_obj, p=cls_wts)
-    ids, inds, cts = np.unique(truth, return_counts=True, return_inverse=True)
-    for i in range(num_obj):
+    true_cls = np.random.choice(range(num_cls), num_obj, p=cls_wts)
+    for cls_id in true_cls:
         times = make_cadence(def_cadence, 0.5)
-        model = cls_models[ids[inds[i]]](**cls_params[ids[inds[i]]])
+        model = cls_models[cls_id](**cls_params[cls_id])
         phot, err = noisify_obs(model(times), 0.1)
         lcs.append(LC(times, phot))
     return(lcs)
