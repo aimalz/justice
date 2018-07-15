@@ -10,18 +10,15 @@ def make_gauss(scale, loc=0., amp=1., const=0.):
     out = lambda x: amp * func.pdf(x) + const
     return out
 
-
 def make_sine(period, phase=0., amp=1., const=0.):
     func = lambda x: amp * (np.sin(period * x + phase)) + const
     return func
 
-
-def sample_obs(x, err):
+def sample_obs(x, xerr):
     assert (np.all((x[1:] - x[:-1]) > xerr))
     jitter = (np.random.uniform(np.shape(x)) - 0.5) * xerr * 2.
     new_x = x + jitter
     return new_x
-
 
 def noisify_obs(y, yerr):
     # only uniform errors, can't differ at each point
