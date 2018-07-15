@@ -35,13 +35,30 @@ def test_positive_negative_mix():
             'window_size': 5,
             'batch_size': 8,
         })
+
+        same_lc_diff_window = 0
+        same_lc_same_window = 0
+
         all_counts = set()
         with tf.Session(graph=g) as sess:
             tensors = dataset.make_one_shot_iterator().get_next()
-            for _ in xrange(10):
+            for _ in xrange(20):
                 results = sess.run(tensors)
                 counts = tuple(sorted(collections.Counter(results['goal']).items()))
                 all_counts.add(counts)
+                left, right = results['left'], results['right']
+                num_diff = [
+                    (left[i] != right[i]).all()
+                    for i in xrange(8)  # batch size
+                    if results['goal'][i] == 1.0
+                ]
+                same_lc_diff_window += sum(num_diff)
+                same_lc_same_window += len(num_diff) - sum(num_diff)
 
         # Each batch is either all positives or negatives.
         assert all_counts == {((0.0, 8),), ((1.0, 8),)}
+
+        assert same_lc_diff_window > 0
+        assert same_lc_diff_window >= 10 * same_lc_same_window, (
+            "Expected most samples from the same light curve to be from different windows."
+        )

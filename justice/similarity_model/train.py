@@ -23,20 +23,26 @@ model_base_dir = os.path.abspath(
 
 
 def main():
-    layer_sizes = [32, 16]
-    model_name = 'sample_{}_{}_v1'.format(*layer_sizes)
-    estimator = tf.estimator.Estimator(
-        model_fn=model.model_fn,
-        model_dir=os.path.join(model_base_dir, model_name),
-        params={
-            'batch_size': 32,
-            'window_size': 5,
-            'dropout_keep_prob': 0.8,
-            'layer_sizes': layer_sizes,
-        }
-    )
-    estimator.train(input_fn=training_data.sample_data_input_fn,
-                    max_steps=int(1e5))
+    layer_sizes = [64, 32]
+    symmetric = True
+    for dropout in [0.7, 0.8, 0.9]:
+        model_name = 'sample_{}_drop{:.2f}_{}_{}_v2'.format(
+            'sym' if symmetric else 'asym',
+            dropout,
+            *layer_sizes)
+        estimator = tf.estimator.Estimator(
+            model_fn=model.model_fn,
+            model_dir=os.path.join(model_base_dir, model_name),
+            params={
+                'batch_size': 32,
+                'window_size': 5,
+                'dropout_keep_prob': dropout,
+                'layer_sizes': layer_sizes,
+                'symmetric': symmetric,
+            }
+        )
+        estimator.train(input_fn=training_data.sample_data_input_fn,
+                        max_steps=int(1e5))
 
 
 if __name__ == '__main__':
