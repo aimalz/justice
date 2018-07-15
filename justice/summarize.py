@@ -5,12 +5,22 @@ from george import kernels
 import numpy as np
 import scipy.optimize as spo
 
-from util import LC, Aff, transform, merge, make_aff
+from simulate import LC, Aff, transform
 
 def lineup(lca, lcb):
     # optimize the lining up for GP and arclen
     # do this on coarse grid, then refine
     pass
+
+def merge(lca, lcb):
+    new_x = np.concatenate((lca.x, lcb.x))
+    new_y = np.concatenate((lca.y, lcb.y))
+    new_yerr = np.concatenate((lca.yerr, lcb.yerr))
+    order = np.argsort(new_x)
+    ord_x = new_x[order]
+    ord_y = new_y[order]
+    ord_yerr = new_yerr[order]
+    return LC(ord_x, ord_y, ord_yerr)
 
 def connect_the_dots(lc):
     # ignores errors
@@ -27,7 +37,7 @@ def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], metho
     else:
         constraints = None
     def _helper(vals):
-        aff = make_aff(vals)
+        aff = Aff(*vals)
         lc = transform(lcb, aff)
         new_lc = merge(lca, lc)
         length = connect_the_dots(new_lc)
@@ -38,7 +48,7 @@ def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], metho
         # fin = merge(lca, tmp)
         # debug = connect_the_dots(fin)
         return(res)
-    res_aff = make_aff(res.x)
+    res_aff = Aff(*res.x)
     return(res_aff)
 
 def gp_train(kernel, lctrain):

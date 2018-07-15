@@ -1,9 +1,19 @@
 """Simulates mock data"""
 
+from collections import namedtuple
 import numpy as np
 import scipy.stats as sps
 
-from util import LC, Aff, transform
+LC = namedtuple('LC', ('x', 'y', 'yerr'))# time, flux/mag, flux/mag err
+
+Aff = namedtuple('Aff', ('tx', 'ty', 'dx', 'dy'))# translation, dilation in x, y
+
+def transform(lc, aff):
+    # check that error really does behave this way
+    new_x = (aff.dx * lc.x) + aff.tx
+    new_y = (aff.dy * lc.y) + aff.ty
+    new_yerr = np.sqrt(aff.dy) * lc.yerr
+    return LC(new_x, new_y, new_yerr)
 
 def make_gauss(scale, loc=0., amp=1., const=0.):
     func = sps.norm(loc, scale)
