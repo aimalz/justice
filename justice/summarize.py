@@ -23,7 +23,7 @@ def merge(lca, lcb):
     return LC(ord_x, ord_y, ord_yerr)
 
 def connect_the_dots(lc):
-    # ignores errors
+    # ignores errorbars
     x_difs = (lc.x[1:] - lc.x[:-1])
     y_difs = lc.y[1:] - lc.y[:-1]
     sol = np.sqrt(x_difs ** 2 + y_difs ** 2)
@@ -36,18 +36,17 @@ def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], metho
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
         constraints = None
+    # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
         aff = Aff(*vals)
         lc = transform(lcb, aff)
         new_lc = merge(lca, lc)
         length = connect_the_dots(new_lc)
         return(length)
+    # could make this a probability by taking chi^2 error relative to connect_the_dots original, but it didn't work better in the sandbox notebook
     res = spo.minimize(_helper, ivals, constraints=constraints, method=method, options=options)
     if vb:
-        # tmp = transform(lcb, res.x)
-        # fin = merge(lca, tmp)
-        # debug = connect_the_dots(fin)
-        return(res)
+        print(res)
     res_aff = Aff(*res.x)
     return(res_aff)
 

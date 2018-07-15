@@ -7,6 +7,7 @@ import scipy.stats as sps
 LC = namedtuple('LC', ('x', 'y', 'yerr'))# time, flux/mag, flux/mag err
 
 Aff = namedtuple('Aff', ('tx', 'ty', 'dx', 'dy'))# translation, dilation in x, y
+# currently this doesn't handle multiple filters/colors
 
 def transform(lc, aff):
     # check that error really does behave this way
