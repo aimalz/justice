@@ -56,7 +56,7 @@ def get_data_names():
     csv_files = glob.glob(os.path.join(lc_data_dir, '*.csv'))
     if not csv_files:
         raise ValueError("Didn't find any CSV files in time_series_demo/lc_data. Maybe that repo changed?")
-    return [os.path.basename(f).replace(".csv", "") for f in csv_files]
+    return sorted([os.path.basename(f).replace(".csv", "") for f in csv_files])
 
 
 def get_sample_data(name):
@@ -86,8 +86,11 @@ def get_downsampled_data(name):
     return f.read()
 
 
+def get_all_downsampled():
+    return [get_downsampled_data(name) for name in get_data_names()]
+
+
 if __name__ == '__main__':
     start_time = time.time()
-    for data_name in get_data_names():
-        get_downsampled_data(data_name)
+    get_all_downsampled()
     print("Elapsed: {:.3f} s".format(time.time() - start_time))
