@@ -61,7 +61,7 @@ def fit_gp(kernel, lctrain, xpred):
         gp.set_parameter_vector(p)
         return -1. * gp.grad_log_likelihood(lctrain.y)
     result = spo.minimize(neg_ln_like, gp.get_parameter_vector(), jac=grad_neg_ln_like)
-    print(result.x)
+    # print(result.x)
     gp.set_parameter_vector(result.x)
     # print("\nFinal ln-likelihood: {0:.2f}".format(gp.log_likelihood(lctrain.y)))
     ypred, yvarpred = gp.predict(lctrain.y, xpred, return_var=True)
