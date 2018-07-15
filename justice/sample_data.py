@@ -2,6 +2,7 @@ import glob
 import json
 import os
 import os.path
+import time
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,42 @@ import download_data
 array_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../data/mmap_arrays"))
 
 lc_data_dir = os.path.join(download_data.time_series_dir, 'lc_data')
+
+
+class MmapArrayFile(object):
+    def __init__(self, name, array_dir=array_dir):
+        self.array_dir = array_dir
+        self.name = name
+
+    @property
+    def mmap_filename(self):
+        return os.path.join(self.array_dir, self.name + ".numpy-mmap")
+
+    @property
+    def info_file(self):
+        return os.path.join(self.array_dir, self.name + "-info.json")
+
+    def exists(self):
+        return os.path.isfile(self.mmap_filename) and os.path.isfile(self.info_file)
+
+    def write(self, array):
+        if not isinstance(array, np.ndarray):
+            raise TypeError("Expected an ndarray")
+
+        np.memmap(self.mmap_filename, dtype=array.dtype, mode='w+', shape=array.shape)[:] = array
+        try:
+            with open(self.info_file, 'w') as f:
+                json.dump({'shape': array.shape, 'dtype': array.dtype.name}, f)
+        except Exception:
+            os.unlink(self.info_file)
+            raise
+
+    def read(self):
+        with open(self.info_file, 'r') as f:
+            shape_dtype = json.load(f)
+            shape_dtype['shape'] = tuple(shape_dtype['shape'])
+            shape_dtype['dtype'] = getattr(np, shape_dtype['dtype'])
+        return np.memmap(self.mmap_filename, mode='r', **shape_dtype)
 
 
 def get_data_names():
@@ -30,28 +67,27 @@ def get_sample_data(name):
     if not os.path.isdir(array_dir):
         os.makedirs(array_dir)
 
-    mmap_filename = os.path.join(array_dir, name + ".numpy-mmap")
-    info_file = os.path.join(array_dir, name + "-info.json")
-    if not (os.path.isfile(mmap_filename) and os.path.isfile(info_file)):
+    f = MmapArrayFile(name)
+    if not f.exists():
         data = pd.read_csv(source_filename, names=['time', 'value', 'error']).as_matrix()
         entries, num_cols = data.shape
         assert num_cols == 3, "sanity check"
         assert 100 < entries < int(1e9), "sanity check"
-        np.memmap(mmap_filename, dtype=data.dtype, mode='w+', shape=data.shape)[:] = data
-        try:
-            with open(info_file, 'w') as f:
-                json.dump({'shape': data.shape, 'dtype': data.dtype.name}, f)
-        except Exception:
-            os.unlink(info_file)
-            raise
+        f.write(data)
+    return f.read()
 
-    with open(info_file, 'r') as f:
-        shape_dtype = json.load(f)
-        shape_dtype['shape'] = tuple(shape_dtype['shape'])
-        shape_dtype['dtype'] = getattr(np, shape_dtype['dtype'])
-    return np.memmap(mmap_filename, mode='r', **shape_dtype)
+
+def get_downsampled_data(name):
+    f = MmapArrayFile(name + "-downsampled")
+    if not f.exists():
+        original = get_sample_data(name)
+        npt_lsst = np.ceil(np.ptp(original[:, 0]) / 1.6).astype('int')
+        f.write(original[::npt_lsst, :])
+    return f.read()
 
 
 if __name__ == '__main__':
+    start_time = time.time()
     for data_name in get_data_names():
-        get_sample_data(data_name)
+        get_downsampled_data(data_name)
+    print("Elapsed: {:.3f} s".format(time.time() - start_time))
