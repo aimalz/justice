@@ -5,35 +5,48 @@ import matplotlib.pyplot as plt
 from util import transform, merge
 
 # would like to have these pass axes between each other to combine what's being plotted
-# all untested for now!
+# also want to accommodate multiple filters/bands of y
 
-def plot_lcs(lcs):
+def setup_plot():
+    pass
+
+def wrapup_plot():
+    passs
+
+def plot_lcs(lcs, save=None):
+    if type(lcs) != list:
+        lcs = [lcs]
+    fig = plt.figure()
     for lci in lcs:
-        plt.errorbar(lci.x, lci.y, yerr=lci.yerr, linestyle='None', capsize=0)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.show()
-    return
+        plt.errorbar(lci.x, lci.y, yerr=lci.yerr, linestyle='None', marker='.')
+    plt.xlabel('time')
+    plt.ylabel('brightness')
+    if type(save) == str:
+        plt.savefig(save, dpi=250)
+    return(fig)
 
-def plot_arclen(lca, lcb, res):
-    aff = res.x
-    plt.errorbar(lca.x, lca.y, yerr=lca.yerr, label='original', capsize=0)
-    plt.errorbar(lcb.x, lcb.y, yerr=lcb.yerr, label='proposal', capsize=0)
+def plot_arclen_res(lca, lcb, aff, save=None):
+    fig = plt.figure()
+    plt.errorbar(lca.x, lca.y, yerr=lca.yerr, label='reference')
+    plt.errorbar(lcb.x, lcb.y, yerr=lcb.yerr, label='proposal')
     lcc = transform(lcb, aff)
-    plt.errorbar(lcc.x, lcc.y, yerr=lcc.yerr, label='transformed', capsize=0)
+    plt.errorbar(lcc.x, lcc.y, yerr=lcc.yerr, label='transformed')
     lcd = merge(lca, lcc)
-    plt.errorbar(lcd.x, lcd.y, yerr=lcd.yerr, label='merged', capsize=0)
+    plt.errorbar(lcd.x, lcd.y, yerr=lcd.yerr, label='merged')
     plt.legend()
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.show()
-    return
+    plt.xlabel('time')
+    plt.ylabel('brightness')
+    if type(save) == str:
+        plt.savefig(save, dpi=250)
+    return(fig)
 
-def plot_gp(lctrain, lctest):
-    plt.fill_between(lctest.x, lctest.y-lctest.yerr, lctest.y+lctest.yerr, alpha=0.1)
-    plt.errorbar(lctest.x, lctest.y, yerr=lctest.yerr)
-    plt.errorbar(lctrain.x, lctrain.y, yerr=lctrain.yerr, linestyle='None', capsize=0)
-    plt.show()
-    plt.xlabel('x')
-    plt.ylabel('y')
-    return
+def plot_gp_res(lctrain, lcpred, save=None):
+    fig = plt.figure()
+    plt.fill_between(lcpred.x, lcpred.y-lcpred.yerr, lcpred.y+lcpred.yerr, alpha=0.1)
+    plt.plot(lcpred.x, lcpred.y)
+    plt.errorbar(lctrain.x, lctrain.y, yerr=lctrain.yerr, linestyle='None', marker='.')
+    plt.xlabel('time')
+    plt.ylabel('brightness')
+    if type(save) == str:
+        plt.savefig(save, dpi=250)
+    return(fig)
