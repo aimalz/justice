@@ -126,6 +126,8 @@ def sample_data_input_fn(params):
 
     # Current sample method: First select sample index, then select window.
     num_samples = len(all_downsampled)
+    if num_samples < 2:
+        raise ValueError("Need at least 2 light curves for negative samples!")
     dataset = tf.data.Dataset.range(num_samples)
     dataset = dataset.repeat().shuffle(num_samples * 2).batch(batch_size)
 

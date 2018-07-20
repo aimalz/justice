@@ -24,9 +24,10 @@ model_base_dir = os.path.abspath(
 
 def main():
     layer_sizes = [64, 32]
+    steps = int(1e5)
     symmetric = True
-    for dropout in [0.7, 0.8, 0.9]:
-        model_name = 'sample_{}_drop{:.2f}_{}_{}_v2'.format(
+    for dropout in [0.7]:
+        model_name = 'sample_{}_drop{:.2f}_{}_{}_v3'.format(
             'sym' if symmetric else 'asym',
             dropout,
             *layer_sizes)
@@ -39,10 +40,11 @@ def main():
                 'dropout_keep_prob': dropout,
                 'layer_sizes': layer_sizes,
                 'symmetric': symmetric,
+                'lr_decay_steps': steps // 10,
             }
         )
         estimator.train(input_fn=training_data.sample_data_input_fn,
-                        max_steps=int(1e5))
+                        max_steps=steps)
 
 
 if __name__ == '__main__':

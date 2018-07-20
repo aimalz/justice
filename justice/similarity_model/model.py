@@ -8,7 +8,17 @@ import tensorflow as tf
 from tensorflow.contrib import layers
 
 
-def extract_vector(window_data, params, name):
+def extract_similarity_vector(window_data, params, name):
+    """Extracts a vector that represents a window of data.
+
+    Currently it first builds diffs from all neighboring flux values.
+
+    :param window_data: <float64>[batch_size, window_size, 3] tensor of input
+        light curve data. Currently contains time values, flux, and flux error.
+    :param params: Model parameters.
+    :param name: String name "left" or "right".
+    :returns: Normalized similarity tensor.
+    """
     batch_size = params["batch_size"]
     window_size = params["window_size"]
     dropout_rate = params["dropout_keep_prob"]
@@ -18,10 +28,13 @@ def extract_vector(window_data, params, name):
     assert window_data.shape == (batch_size, window_size, 3)
 
     # <float64>: [batch_size, window_size]
+    time_values = window_data[:, :, 0]
     flux_values = window_data[:, :, 1]
 
     # <float64>: [batch_size, window_size - 1]
-    diffs = flux_values[:, 1:] - flux_values[:, :-1]
+    flux_diffs = flux_values[:, 1:] - flux_values[:, :-1]
+    time_diffs = time_values[:, 1:] - time_values[:, :-1]
+    diffs = flux_diffs / time_diffs
 
     reuse = tf.AUTO_REUSE if symmetric else False
     scope_name = "extract_vector" if symmetric else "extract_vector_{}".format(name)
@@ -46,8 +59,8 @@ def extract_vector(window_data, params, name):
 def model_fn(features, labels, mode, params):
     left, right = features['left'], features['right']
 
-    left_vec = extract_vector(left, params, "left")
-    right_vec = extract_vector(right, params, "right")
+    left_vec = extract_similarity_vector(left, params, "left")
+    right_vec = extract_similarity_vector(right, params, "right")
     predictions = tf.reduce_sum(left_vec * right_vec, axis=1)
 
     loss = None
@@ -57,11 +70,18 @@ def model_fn(features, labels, mode, params):
 
     train_op = None
     if mode == tf.estimator.ModeKeys.TRAIN:
+        global_step = tf.train.get_global_step()
+        learning_rate = tf.train.exponential_decay(
+            params.get('learning_rate', 1e-3),
+            global_step,
+            params['lr_decay_steps'],
+            params.get('lr_decay_rate', 0.96),
+            staircase=False)
         train_op = tf.contrib.layers.optimize_loss(
             loss=loss,
-            global_step=tf.train.get_global_step(),
+            global_step=global_step,
             optimizer=tf.train.AdamOptimizer,
-            learning_rate=1e-3,
+            learning_rate=learning_rate,
         )
     return tf.estimator.EstimatorSpec(
         mode=mode,
