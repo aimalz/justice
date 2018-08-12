@@ -1,2 +1,2 @@
 #!/bin/bash
-python -m pytest -s test
+python -m pytest -s test "$@"
