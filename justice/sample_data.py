@@ -1,5 +1,4 @@
 import glob
-import json
 import os
 import os.path
 import time
@@ -8,46 +7,9 @@ import numpy as np
 import pandas as pd
 
 import download_data
-
-array_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../data/mmap_arrays"))
+from justice import mmap_array
 
 lc_data_dir = os.path.join(download_data.time_series_dir, 'lc_data')
-
-
-class MmapArrayFile(object):
-    def __init__(self, name, array_dir=array_dir):
-        self.array_dir = array_dir
-        self.name = name
-
-    @property
-    def mmap_filename(self):
-        return os.path.join(self.array_dir, self.name + ".numpy-mmap")
-
-    @property
-    def info_file(self):
-        return os.path.join(self.array_dir, self.name + "-info.json")
-
-    def exists(self):
-        return os.path.isfile(self.mmap_filename) and os.path.isfile(self.info_file)
-
-    def write(self, array):
-        if not isinstance(array, np.ndarray):
-            raise TypeError("Expected an ndarray")
-
-        np.memmap(self.mmap_filename, dtype=array.dtype, mode='w+', shape=array.shape)[:] = array
-        try:
-            with open(self.info_file, 'w') as f:
-                json.dump({'shape': array.shape, 'dtype': array.dtype.name}, f)
-        except Exception:
-            os.unlink(self.info_file)
-            raise
-
-    def read(self):
-        with open(self.info_file, 'r') as f:
-            shape_dtype = json.load(f)
-            shape_dtype['shape'] = tuple(shape_dtype['shape'])
-            shape_dtype['dtype'] = getattr(np, shape_dtype['dtype'])
-        return np.memmap(self.mmap_filename, mode='r', **shape_dtype)
 
 
 def get_data_names():
@@ -64,10 +26,7 @@ def get_sample_data(name):
     if not os.path.isfile(source_filename):
         raise EnvironmentError("Expected to find a file {!r}".format(source_filename))
 
-    if not os.path.isdir(array_dir):
-        os.makedirs(array_dir)
-
-    f = MmapArrayFile(name)
+    f = mmap_array.MmapArrayFile(name)
     if not f.exists():
         data = pd.read_csv(source_filename, names=['time', 'value', 'error']).as_matrix()
         entries, num_cols = data.shape
@@ -78,7 +37,7 @@ def get_sample_data(name):
 
 
 def get_downsampled_data(name):
-    f = MmapArrayFile(name + "-downsampled")
+    f = mmap_array.MmapArrayFile(name + "-downsampled")
     if not f.exists():
         original = get_sample_data(name)
         npt_lsst = np.ceil(np.ptp(original[:, 0]) / 1.6).astype('int')
