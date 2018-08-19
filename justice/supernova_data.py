@@ -94,11 +94,20 @@ class SNDataset(object):
             self.index_df = pickle.load(f)
         self.lc_data = all_lc_data.read()
         self.rng = np.random.RandomState()  # Pre-init for faster sampling.
+        self.all_ids = self.index_df['id'].unique()
 
     def random_lc(self):
         row = self.index_df.sample(1, random_state=self.rng).iloc[0]
         data = self.lc_data[row.start:row.end, :]
         return row, data
+
+    def random_lc_all_flux(self):
+        random_id = self.rng.choice(self.all_ids)
+        row_and_data = []
+        for row in self.index_df[self.index_df['id'] == random_id].itertuples():
+            data = self.lc_data[row.start:row.end, :]
+            row_and_data.append((row, data))
+        return random_id, row_and_data
 
 
 if __name__ == '__main__':
