@@ -5,10 +5,10 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-import cPickle
 import glob
 import os.path
 import sys
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -84,14 +84,14 @@ def generate_data_main():
     # Write index and data.
     index_df = pd.DataFrame.from_records(index_rows)
     with open(index_filename, 'wb') as f:
-        cPickle.dump(index_df, f, protocol=2)
+        pickle.dump(index_df, f, protocol=2)
     all_lc_data.write(data)
 
 
 class SNDataset(object):
     def __init__(self):
         with open(index_filename, 'rb') as f:
-            self.index_df = cPickle.load(f)
+            self.index_df = pickle.load(f)
         self.lc_data = all_lc_data.read()
         self.rng = np.random.RandomState()  # Pre-init for faster sampling.
 
