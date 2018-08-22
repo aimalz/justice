@@ -1,26 +1,18 @@
 """Tools for summarizing lightcurve data into statistics"""
 
 import george
-from george import kernels
 import numpy as np
 import scipy.optimize as spo
 
-from simulate import LC, Aff, transform
+from justice.affine_xform import Aff, transform
+from justice.lightcurve import LC, merge
+
 
 def lineup(lca, lcb):
     # optimize the lining up for GP and arclen
     # do this on coarse grid, then refine
     pass
 
-def merge(lca, lcb):
-    new_x = np.concatenate((lca.x, lcb.x))
-    new_y = np.concatenate((lca.y, lcb.y))
-    new_yerr = np.concatenate((lca.yerr, lcb.yerr))
-    order = np.argsort(new_x)
-    ord_x = new_x[order]
-    ord_y = new_y[order]
-    ord_yerr = new_yerr[order]
-    return LC(ord_x, ord_y, ord_yerr)
 
 def connect_the_dots(lc):
     # ignores errorbars
@@ -29,6 +21,7 @@ def connect_the_dots(lc):
     sol = np.sqrt(x_difs ** 2 + y_difs ** 2)
     return np.sum(sol)
 
+
 def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], method='Nelder-Mead', options={'maxiter':10000}, vb=True):
     if method != 'Nelder-Mead':
         def pos_dil(aff):
@@ -36,6 +29,7 @@ def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], metho
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
         constraints = None
+
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
         aff = Aff(*vals)
@@ -50,10 +44,12 @@ def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], metho
     res_aff = Aff(*res.x)
     return(res_aff)
 
+
 def gp_train(kernel, lctrain):
     gp = george.GP(kernel)
     gp.compute(lctrain.x, lctrain.yerr**2)
     return gp
+
 
 def gp_pred(kernel, lctrain, xpred):
     gp = gp_train(kernel, lctrain)
@@ -61,11 +57,14 @@ def gp_pred(kernel, lctrain, xpred):
     lcpred = LC(xpred, ypred, np.sqrt(yprederr))
     return lcpred
 
+
 def fit_gp(kernel, lctrain, xpred):
     gp = gp_train(kernel, lctrain)
+
     def neg_ln_like(p):
         gp.set_parameter_vector(p)
         return -1. * gp.log_likelihood(lctrain.y)
+
     def grad_neg_ln_like(p):
         gp.set_parameter_vector(p)
         return -1. * gp.grad_log_likelihood(lctrain.y)
