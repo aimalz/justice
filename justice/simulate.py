@@ -58,8 +58,8 @@ def make_dataset(num_obj, def_cadence, cls_models, cls_params, cls_wts=None):
     lcs = []
     true_cls = np.random.choice(range(num_cls), num_obj, p=cls_wts)
     for cls_id in true_cls:
-        x = make_cadence(def_cadence, 0.5)
+        x = make_cadence(def_cadence, [0.5,]*len(def_cadence))
         model = cls_models[cls_id](**cls_params[cls_id])
-        y, yerr = apply_err(model(x), 0.1)
+        y, yerr = apply_err(model(x), [0.1]*len(x))
         lcs.append(LC(x, y, yerr))
     return lcs
