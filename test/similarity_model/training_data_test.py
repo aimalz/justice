@@ -42,14 +42,14 @@ def test_positive_negative_mix():
         all_counts = set()
         with tf.Session(graph=g) as sess:
             tensors = dataset.make_one_shot_iterator().get_next()
-            for _ in xrange(20):
+            for _ in range(20):
                 results = sess.run(tensors)
                 counts = tuple(sorted(collections.Counter(results['goal']).items()))
                 all_counts.add(counts)
                 left, right = results['left'], results['right']
                 num_diff = [
                     (left[i] != right[i]).all()
-                    for i in xrange(8)  # batch size
+                    for i in range(8)  # batch size
                     if results['goal'][i] == 1.0
                 ]
                 same_lc_diff_window += sum(num_diff)
