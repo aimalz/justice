@@ -2,17 +2,20 @@
 
 import matplotlib.pyplot as plt
 
-from simulate import transform
-from summarize import merge
+from justice.affine_xform import transform
+from justice.lightcurve import merge
 
 # would like to have these pass axes between each other to combine what's being plotted
 # also want to accommodate multiple filters/bands of y
 
+
 def setup_plot():
     pass
 
+
 def wrapup_plot():
-    passs
+    pass
+
 
 def plot_lcs(lcs, save=None):
     if type(lcs) != list:
@@ -25,6 +28,7 @@ def plot_lcs(lcs, save=None):
     if type(save) == str:
         plt.savefig(save, dpi=250)
     return(fig)
+
 
 def plot_arclen_res(lca, lcb, aff, save=None):
     fig = plt.figure()
@@ -41,9 +45,10 @@ def plot_arclen_res(lca, lcb, aff, save=None):
         plt.savefig(save, dpi=250)
     return(fig)
 
+
 def plot_gp_res(lctrain, lcpred, save=None):
     fig = plt.figure()
-    plt.fill_between(lcpred.x, lcpred.y-lcpred.yerr, lcpred.y+lcpred.yerr, alpha=0.1)
+    plt.fill_between(lcpred.x, lcpred.y - lcpred.yerr, lcpred.y + lcpred.yerr, alpha=0.1)
     plt.plot(lcpred.x, lcpred.y)
     plt.errorbar(lctrain.x, lctrain.y, yerr=lctrain.yerr, linestyle='None', marker='.')
     plt.xlabel('time')
