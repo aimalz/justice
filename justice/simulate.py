@@ -5,36 +5,52 @@ import scipy.stats as sps
 from justice.lightcurve import LC
 
 
-def make_gauss(scale, loc=0., amp=1., const=0.):
-    func = sps.norm(loc, scale)
-    peakval = func.pdf(loc)
-    ampfact = amp / peakval
+def make_gauss(scales, locs=[0.,], amps=[1.,], consts=[0.,]):
+    funcs = []
+    ampfacts = []
+    for scale, loc, amp, const in zip(scales,locs,amps,consts):
+        func = sps.norm(loc, scale)
+        funcs.append(func)
+        peakval = func.pdf(loc)
+        ampfacts.append(amp / peakval)
 
-    def out(x):
-        return ampfact * func.pdf(x) + const
+    def out(xs):
+        ys = []
+        for ampfact, func, x, const in zip(ampfacts, funcs, xs, consts):
+            ys.append(ampfact * func.pdf(x) + const)
+        return ys
     return out
 
 
-def make_sine(period, phase=0., amp=1., const=0.):
+def make_sine(periods, phases=[0.,], amps=[1.,], consts=[0.,]):
     # returns a sinusoid function that is always non-negative
 
-    def func(x):
-        return amp * (np.sin(period * x + phase)) + (const + amp)
-    return func
+    def out(xs):
+        ys = []
+        for period, phase, amp, const, x in zip(periods, phases, amps, consts, xs):
+            ys.append(amp * (np.sin(period * x + phase)) + (const + amp))
+        return ys
+    return out
 
 
-def make_cadence(x, xerr):
-    assert (np.all((x[1:] - x[:-1]) > xerr))
-    jitter = (np.random.uniform(np.shape(x)) - 0.5) * xerr
-    new_x = x + jitter
-    return new_x
+def make_cadence(xs, xerrs):
+    new_xs = []
+    for x, xerr in zip(xs, xerrs):
+        assert (np.all((x[1:] - x[:-1]) > xerr))
+        jitter = (np.random.uniform(np.shape(x)) - 0.5) * xerr
+        new_xs.append(x + jitter)
+    return new_xs
 
 
-def apply_err(y, yerrfrac):
+def apply_err(ys, yerrfracs):
     # only uniform errors, can't differ at each point
-    yerr = yerrfrac * y
-    new_y = y + sps.norm(0., yerr).rvs(np.shape(y))
-    return (new_y, yerr)
+    new_ys = []
+    new_yerrs = []
+    for y, yerrfrac in zip(ys, yerrfracs):
+        yerr = yerrfrac * y
+        new_ys.append(y + sps.norm(0., yerr).rvs(np.shape(y)))
+        new_yerrs.append(yerr)
+    return (new_ys, new_yerrs)
 
 
 def make_dataset(num_obj, def_cadence, cls_models, cls_params, cls_wts=None):

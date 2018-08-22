@@ -16,10 +16,12 @@ def lineup(lca, lcb):
 
 def connect_the_dots(lc):
     # ignores errorbars
-    x_difs = (lc.x[1:] - lc.x[:-1])
-    y_difs = lc.y[1:] - lc.y[:-1]
-    sol = np.sqrt(x_difs ** 2 + y_difs ** 2)
-    return np.sum(sol)
+    sol = 0.
+    for x, y, yerr in zip(lc.x, lc.y, lc.yerr):
+        x_difs = (x[1:] - x[:-1])
+        y_difs = y[1:] - y[:-1]
+        sol += np.sum(np.sqrt(x_difs ** 2 + y_difs ** 2))
+    return sol
 
 
 def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], method='Nelder-Mead', options={'maxiter':10000}, vb=True):
