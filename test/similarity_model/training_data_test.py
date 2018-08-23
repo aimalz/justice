@@ -21,7 +21,7 @@ def test_prefix_function():
         start_indices = training_data.get_window_valid_indices(diffs, 0.8, 1.2, window_size)
         results = []
         for start_idx in start_indices:
-            results.append(map(int, time_samples[start_idx:(start_idx + window_size)]))
+            results.append([int(sample) for sample in time_samples[start_idx:(start_idx + window_size)]])
         return results
 
     assert get_windowed_samples(1) == [[0], [1], [2], [3], [4], [10], [11], [12], [12], [13], [14]]
