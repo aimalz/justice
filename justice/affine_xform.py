@@ -19,7 +19,6 @@ def transform(lc, aff):
     new_y = []
     new_yerr = []
     for x, y, yerr in zip(lc.x, lc.y, lc.yerr):
-        print (lc)
         new_x.append((aff.dx * x) + aff.tx)
         new_y.append((aff.dy * y) + aff.ty)
         new_yerr.append(np.sqrt(aff.dy) * yerr)
