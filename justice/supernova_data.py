@@ -135,11 +135,19 @@ class SNDataset(object):
             random_id = self.rng.choice(self.ids_with_answers)
         else:
             random_id = self.rng.choice(self.all_ids)
+        return(random_id, self.get_lc_by_id(random_id))
+
+    def get_lc_by_id(self, id):
+        if not isinstance(id, int):
+            raise TypeError("id must be int")
         row_and_data = []
-        for row in self.index_df[self.index_df['id'] == random_id].itertuples():
+        for row in self.index_df[self.index_df['id'] == id].itertuples():
             data = self.lc_data[row.start:row.end, :]
             row_and_data.append((row, data))
-        return random_id, row_and_data
+        return row_and_data
+
+    def get_ids_for_type(self, lc_type):
+        return(self.index_df[self.index_df['type'] == lc_type]['id'].unique())
 
 
 if __name__ == '__main__':
