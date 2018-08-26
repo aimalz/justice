@@ -21,7 +21,7 @@ def test_prefix_function():
         start_indices = training_data.get_window_valid_indices(diffs, 0.8, 1.2, window_size)
         results = []
         for start_idx in start_indices:
-            results.append(map(int, time_samples[start_idx:(start_idx + window_size)]))
+            results.append([int(sample) for sample in time_samples[start_idx:(start_idx + window_size)]])
         return results
 
     assert get_windowed_samples(1) == [[0], [1], [2], [3], [4], [10], [11], [12], [12], [13], [14]]
@@ -42,14 +42,14 @@ def test_positive_negative_mix():
         all_counts = set()
         with tf.Session(graph=g) as sess:
             tensors = dataset.make_one_shot_iterator().get_next()
-            for _ in xrange(20):
+            for _ in range(20):
                 results = sess.run(tensors)
                 counts = tuple(sorted(collections.Counter(results['goal']).items()))
                 all_counts.add(counts)
                 left, right = results['left'], results['right']
                 num_diff = [
                     (left[i] != right[i]).all()
-                    for i in xrange(8)  # batch size
+                    for i in range(8)  # batch size
                     if results['goal'][i] == 1.0
                 ]
                 same_lc_diff_window += sum(num_diff)

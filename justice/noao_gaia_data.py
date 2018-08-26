@@ -17,7 +17,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from justice import mmap_array
+from justice.mmap_array import mmap_array
 
 pickle_file = os.path.abspath(
     os.path.join(os.path.abspath(__file__), "../../gaia-selection.pickle")
