@@ -18,9 +18,6 @@ from justice import mmap_array
 sn_dir = os.path.join(mmap_array.default_array_dir, 'sn_phot_cc')
 index_filename = os.path.join(sn_dir, 'index_df.pickle')
 all_lc_data = mmap_array.MmapArrayFile('all', array_dir=sn_dir, order='C')
-truth_txt = os.path.abspath(
-    os.path.join(os.path.abspath(__file__), "../../snphotcc_truth.txt"))
-assert(os.path.isfile(truth_txt))
 
 
 def parse_truth(filename):
@@ -69,7 +66,6 @@ def make_parse_fcn(truth_filename):
         }
         return sn_id, sn_type, by_flt
     return parse_file
-
 
 
 def generate_data_main():
