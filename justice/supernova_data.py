@@ -138,7 +138,7 @@ class SNDataset(object):
         return(random_id, self.get_lc_by_id(random_id))
 
     def get_lc_by_id(self, id):
-        if not isinstance(id, int):
+        if not isinstance(id, (int, np.int64)):
             raise TypeError("id must be int")
         row_and_data = []
         for row in self.index_df[self.index_df['id'] == id].itertuples():
@@ -148,6 +148,13 @@ class SNDataset(object):
 
     def get_ids_for_type(self, lc_type):
         return(self.index_df[self.index_df['type'] == lc_type]['id'].unique())
+
+def data_by_flt(row_and_data):
+    """Convert data from get_lc_by_id to a dict, keyed by filter."""
+    return {
+        idx_row.flt: data
+        for idx_row, data in row_and_data
+    }
 
 
 if __name__ == '__main__':
