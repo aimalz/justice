@@ -16,9 +16,9 @@ def make_gauss(scales, locs=[0.,], amps=[1.,], consts=[0.,]):
 
     def out(xs):
         ys = []
-        for ampfact, func, x, const in zip(ampfacts, funcs, xs, consts):
+        for ampfact, func, x, const in zip(ampfacts, funcs, xs.T, consts):
             ys.append(ampfact * func.pdf(x) + const)
-        return ys
+        return np.array(ys).T
     return out
 
 
@@ -27,9 +27,9 @@ def make_sine(periods, phases=[0.,], amps=[1.,], consts=[0.,]):
 
     def out(xs):
         ys = []
-        for period, phase, amp, const, x in zip(periods, phases, amps, consts, xs):
+        for period, phase, amp, const, x in zip(periods, phases, amps, consts, xs.T):
             ys.append(amp * (np.sin(period * x + phase)) + (const + amp))
-        return ys
+        return np.array(ys).T
     return out
 
 
@@ -39,18 +39,18 @@ def make_cadence(xs, xerrs):
         assert (np.all((x[1:] - x[:-1]) > xerr))
         jitter = (np.random.uniform(np.shape(x)) - 0.5) * xerr
         new_xs.append(x + jitter)
-    return new_xs
+    return np.array(new_xs).T
 
 
 def apply_err(ys, yerrfracs):
     # only uniform errors, can't differ at each point
     new_ys = []
     new_yerrs = []
-    for y, yerrfrac in zip(ys, yerrfracs):
+    for y, yerrfrac in zip(ys.T, yerrfracs):
         yerr = yerrfrac * y
         new_ys.append(y + sps.norm(0., yerr).rvs(np.shape(y)))
         new_yerrs.append(yerr)
-    return (new_ys, new_yerrs)
+    return (np.array(new_ys).T, np.array(new_yerrs).T)
 
 
 def make_dataset(num_obj, def_cadence, cls_models, cls_params, cls_wts=None):

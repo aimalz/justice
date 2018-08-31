@@ -22,11 +22,11 @@ def plot_lcs(lcs, save=None):
     if type(lcs) != list:
         lcs = [lcs]
     fig = plt.figure()
-    numbands = len(lcs[0].x)
+    numbands = lcs[0].x.shape[1]
     for i in range(numbands):
         plt.subplot(numbands, 1, i+1)
         for lci in lcs:
-            plt.errorbar(lci.x[i], lci.y[i], yerr=lci.yerr[i], linestyle='None', marker='.')
+            plt.errorbar(lci.x[:,i], lci.y[:,i], yerr=lci.yerr[:,i], linestyle='None', marker='.')
     plt.xlabel('time')
     plt.ylabel('brightness')
     if type(save) == str:
@@ -38,13 +38,13 @@ def plot_arclen_res(lca, lcb, aff, save=None):
     fig = plt.figure()
     lcc = transform(lcb, aff)
     lcd = merge(lca, lcc)
-    numbands = len(lca.x)
+    numbands = lca.x.shape[1]
     for i in range(numbands):
         plt.subplot(numbands, 1, i+1)
-        plt.errorbar(lca.x[i], lca.y[i], yerr=lca.yerr[i], label='reference')
-        plt.errorbar(lcb.x[i], lcb.y[i], yerr=lcb.yerr[i], label='proposal')
-        plt.errorbar(lcc.x[i], lcc.y[i], yerr=lcc.yerr[i], label='transformed')
-        plt.errorbar(lcd.x[i], lcd.y[i], yerr=lcd.yerr[i], label='merged')
+        plt.errorbar(lca.x[:,i], lca.y[:,i], yerr=lca.yerr[:,i], label='reference')
+        plt.errorbar(lcb.x[:,i], lcb.y[:,i], yerr=lcb.yerr[:,i], label='proposal')
+        plt.errorbar(lcc.x[:,i], lcc.y[:,i], yerr=lcc.yerr[:,i], label='transformed')
+        plt.errorbar(lcd.x[:,i], lcd.y[:,i], yerr=lcd.yerr[:,i], label='merged')
     plt.legend()
     plt.xlabel('time')
     plt.ylabel('brightness')
@@ -55,11 +55,12 @@ def plot_arclen_res(lca, lcb, aff, save=None):
 
 def plot_gp_res(lctrain, lcpred, save=None):
     fig = plt.figure()
-    numbands = len(lctrain.x)
+    numbands = lctrain.x.shape[1]
     for i in range(numbands):
-        plt.fill_between(lcpred.x[i], lcpred.y[i] - lcpred.yerr[i], lcpred.y[i] + lcpred.yerr[i], alpha=0.1)
-        plt.plot(lcpred.x[i], lcpred.y[i])
-        plt.errorbar(lctrain.x[i], lctrain.y[i], yerr=lctrain.yerr[i], linestyle='None', marker='.')
+        plt.subplot(numbands, 1, i+1)
+        plt.fill_between(lcpred.x[:,i], lcpred.y[:,i] - lcpred.yerr[:,i], lcpred.y[:,i] + lcpred.yerr[:,i], alpha=0.1)
+        plt.plot(lcpred.x[:,i], lcpred.y[:,i])
+        plt.errorbar(lctrain.x[:,i], lctrain.y[:,i], yerr=lctrain.yerr[:,i], linestyle='None', marker='.')
     plt.xlabel('time')
     plt.ylabel('brightness')
     if type(save) == str:
