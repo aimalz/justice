@@ -17,7 +17,7 @@ def lineup(lca, lcb):
 def connect_the_dots(lc):
     # ignores errorbars
     sol = 0.
-    for x, y, yerr in zip(lc.x, lc.y, lc.yerr):
+    for x, y, yerr in zip(lc.x.T, lc.y.T, lc.yerr.T):
         x_difs = (x[1:] - x[:-1])
         y_difs = y[1:] - y[:-1]
         sol += np.sum(np.sqrt(x_difs ** 2 + y_difs ** 2))

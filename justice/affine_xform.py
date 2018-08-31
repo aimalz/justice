@@ -18,8 +18,8 @@ def transform(lc, aff):
     new_x = []
     new_y = []
     new_yerr = []
-    for x, y, yerr in zip(lc.x, lc.y, lc.yerr):
+    for x, y, yerr in zip(lc.x.T, lc.y.T, lc.yerr.T):
         new_x.append((aff.dx * x) + aff.tx)
         new_y.append((aff.dy * y) + aff.ty)
         new_yerr.append(np.sqrt(aff.dy) * yerr)
-    return LC(new_x, new_y, new_yerr)
+    return LC(np.array(new_x).T, np.array(new_y).T, np.array(new_yerr).T)
