@@ -5,7 +5,7 @@ import justice.simulate as sim
 
 def test_make_gauss():
     gauss_fcn = sim.make_gauss([1.0,])
-    xs = [np.arange(0.0, 1.0, 0.1),]
+    xs = sim.make_cadence([np.arange(0.0, 1.0, 0.1),], [0.])
     ys = gauss_fcn(xs)
     expected = [1.,
                 0.99501248,
@@ -17,7 +17,7 @@ def test_make_gauss():
                 0.78270454,
                 0.72614904,
                 0.66697681]
-    assert np.sum(np.abs(expected - ys[0])) < 1e-6
+    assert np.sum(np.abs(expected - ys[:,0])) < 1e-6
 
 
 def test_make_dataset():
