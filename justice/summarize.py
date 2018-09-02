@@ -1,6 +1,6 @@
 """Tools for summarizing lightcurve data into statistics"""
 
-import george
+import GPy
 import numpy as np
 import scipy.optimize as spo
 
@@ -47,34 +47,13 @@ def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], metho
     return(res_aff)
 
 
-def gp_train(kernel, lctrain):
-    gp = george.GP(kernel)
-    gp.compute(lctrain.x, lctrain.yerr**2)
-    return gp
-
-
-def gp_pred(kernel, lctrain, xpred):
-    gp = gp_train(kernel, lctrain)
-    ypred, yprederr = gp.predict(lctrain.y, xpred, return_var=True)
-    lcpred = LC(xpred, ypred, np.sqrt(yprederr))
-    return lcpred
-
-
-def fit_gp(kernel, lctrain, xpred):
-    gp = gp_train(kernel, lctrain)
-
-    def neg_ln_like(p):
-        gp.set_parameter_vector(p)
-        return -1. * gp.log_likelihood(lctrain.y)
-
-    def grad_neg_ln_like(p):
-        gp.set_parameter_vector(p)
-        return -1. * gp.grad_log_likelihood(lctrain.y)
-    result = spo.minimize(neg_ln_like, gp.get_parameter_vector(), jac=grad_neg_ln_like)
-    # print(result.x)
-    gp.set_parameter_vector(result.x)
-    # print("\nFinal ln-likelihood: {0:.2f}".format(gp.log_likelihood(lctrain.y)))
-    ypred, yvarpred = gp.predict(lctrain.y, xpred, return_var=True)
+def fit_gp(lctrain, xpred, kernel=None):
+    gp = GPy.models.gp_regression.GPRegression(lctrain.x, lctrain.y,normalizer=True)
+    print (gp)
+    gp.optimize()
+    
+    ypred, yvarpred = gp.predict(xpred)
+    print(yvarpred.shape)
     lcpred = LC(xpred, ypred, np.sqrt(yvarpred))
-    fin_like = gp.log_likelihood(lctrain.y)
+    fin_like = gp.log_likelihood()
     return(lcpred, fin_like)
