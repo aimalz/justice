@@ -14,7 +14,12 @@ def make_aff(list):
 
 def transform(lc, aff):
     # check that error really does behave this way
-    new_x = (aff.dx * lc.x) + aff.tx
-    new_y = (aff.dy * lc.y) + aff.ty
-    new_yerr = np.sqrt(aff.dy) * lc.yerr
-    return LC(new_x, new_y, new_yerr)
+    #unsure if we should separate aff into bands as well, or have a global aff?
+    new_x = []
+    new_y = []
+    new_yerr = []
+    for x, y, yerr in zip(lc.x.T, lc.y.T, lc.yerr.T):
+        new_x.append((aff.dx * x) + aff.tx)
+        new_y.append((aff.dy * y) + aff.ty)
+        new_yerr.append(np.sqrt(aff.dy) * yerr)
+    return LC(np.array(new_x).T, np.array(new_y).T, np.array(new_yerr).T)
