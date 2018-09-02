@@ -1,0 +1,8 @@
+[style]
+based_on_style = facebook
+spaces_before_comment = 2
+column_limit = 90
+join_multiple_lines = true
+indent_width = 4
+split_complex_comprehension = true
+coalesce_brackets = true
