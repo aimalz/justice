@@ -49,11 +49,32 @@ def opt_arclen(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], metho
 
 def fit_gp(lctrain, xpred, kernel=None):
     gp = GPy.models.gp_regression.GPRegression(lctrain.x, lctrain.y,normalizer=True)
-    print (gp)
     gp.optimize()
     
     ypred, yvarpred = gp.predict(xpred)
-    print(yvarpred.shape)
     lcpred = LC(xpred, ypred, np.sqrt(yvarpred))
     fin_like = gp.log_likelihood()
     return(lcpred, fin_like)
+
+def opt_gp(lca, lcb, ivals=np.array([0., 0., 1., 1.]), constraints=[], method='Nelder-Mead', options={'maxiter':10000}, vb=True):
+    if method != 'Nelder-Mead':
+        def pos_dil(aff):
+            return(min(aff.dx, aff.dy))
+        constraints += [{'type': 'ineq', 'fun': pos_dil}]
+    else:
+        constraints = None
+    def_cadence=np.vstack((np.arange(0., 1000., 10.),np.arange(0., 1000., 10.))).T #Not general! Need to change.
+    # don't know if this way of handling constraints actually works -- untested!
+    def _helper(vals):
+        aff = Aff(*vals)
+        lc = transform(lcb, aff)
+        new_lc = merge(lca, lc)
+        pred, fin_like = fit_gp(new_lc, def_cadence)
+        return (-fin_like)
+    # could make this a probability by taking chi^2 error relative to connect_the_dots original, but it didn't work better in the sandbox notebook
+    res = spo.minimize(_helper, ivals, constraints=constraints, method=method, options=options)
+    if vb:
+        print(res)
+    res_aff = Aff(*res.x)
+    return(res_aff)
+    
