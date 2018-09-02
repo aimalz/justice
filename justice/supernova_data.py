@@ -22,11 +22,7 @@ all_lc_data = mmap_array.MmapArrayFile('all', array_dir=sn_dir, order='C')
 
 def parse_truth(filename):
     with open(filename, 'r') as truthfile:
-        return dict(
-            line.strip().split()
-            for line in truthfile
-            if ".DAT" in line
-        )
+        return dict(line.strip().split() for line in truthfile if ".DAT" in line)
 
 
 def make_parse_fcn(truth_filename):
@@ -47,13 +43,13 @@ def make_parse_fcn(truth_filename):
         orig_sn_type, = (l for typ, l in lines_with_type_tag if typ == "SNTYPE")
         sn_type = int(truth_dict.get(os.path.basename(filename), orig_sn_type))
         # if int(orig_sn_type) == -9 and sn_type != -9:
-            # print("Found answer in key file.")
+        # print("Found answer in key file.")
         sn_id, = (int(l) for typ, l in lines_with_type_tag if typ == "SNID")
         var_list, = (l.split() for typ, l in lines_with_type_tag if typ == "VARLIST")
-        observations = [
-            l.split() for typ, l in lines_with_type_tag if typ == "OBS"
-        ]
-        df = pd.DataFrame(observations, columns=var_list).astype({
+        observations = [l.split() for typ, l in lines_with_type_tag if typ == "OBS"]
+        df = pd.DataFrame(
+            observations, columns=var_list
+        ).astype({
             'MJD': np.float64,
             'FLUXCAL': np.float64,
             'FLUXCALERR': np.float64,
@@ -65,6 +61,7 @@ def make_parse_fcn(truth_filename):
             for k, subframe in df.groupby("FLT")
         }
         return sn_id, sn_type, by_flt
+
     return parse_file
 
 
@@ -78,7 +75,7 @@ def generate_data_main():
     cmd_args.add_argument("input_dirs", nargs="+")
     args = cmd_args.parse_args()
     dat_files = [
-        filename
+        filename  # don't auto-format
         for input_dir in args.input_dirs
         for filename in glob.glob(os.path.join(input_dir, "*.DAT"))
     ]
@@ -123,7 +120,8 @@ class SNDataset(object):
         self.rng = np.random.RandomState()  # Pre-init for faster sampling.
         self.all_ids = self.index_df['id'].unique()
         self.ids_with_answers = (
-            self.index_df[self.index_df['type'] != -9]['id'].unique())
+            self.index_df[self.index_df['type'] != -9]['id'].unique()
+        )
 
     def random_lc(self):
         row = self.index_df.sample(1, random_state=self.rng).iloc[0]
