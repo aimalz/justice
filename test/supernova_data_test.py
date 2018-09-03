@@ -14,10 +14,7 @@ def test_random_id_functions(sn_dataset):
     :type sn_dataset: justice.supernova_data.SNDataset
     :param sn_dataset: Supernova dataset fixture.
     """
-    random_ids = frozenset(
-        sn_dataset.random_answer_id()
-        for _ in range(10)
-    )
+    random_ids = frozenset(sn_dataset.random_answer_id() for _ in range(10))
     assert random_ids == frozenset([92234, 197655])
 
 
@@ -39,6 +36,5 @@ def test_format_dense_multi_band_lc(sn_dataset):
     dct = sn_dataset.lc_dict_for_id(92234)
     lc = supernova_data.format_dense_multi_band_from_lc_dict(dct)
     first_times_all_channels = lc.x[0]
-    assert (
-                   np.max(first_times_all_channels) - np.min(first_times_all_channels)) < 1.0
+    assert (np.max(first_times_all_channels) - np.min(first_times_all_channels)) < 1.0
     assert 56177.0 < first_times_all_channels[0] < 56179.0

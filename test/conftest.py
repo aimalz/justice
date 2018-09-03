@@ -12,8 +12,7 @@ import pytest
 
 from justice import mmap_array, supernova_data
 
-_testdata_dir = os.path.abspath(os.path.join(
-    os.path.abspath(__file__), "../testdata"))
+_testdata_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "../testdata"))
 
 
 def _get_dat_files():
@@ -44,5 +43,6 @@ def sn_index_and_mmap_file():
 @pytest.fixture
 def sn_dataset(sn_index_and_mmap_file):
     index_filename, lc_data = sn_index_and_mmap_file
-    return supernova_data.SNDataset(override_index_filename=index_filename,
-                                    override_all_lc_data=lc_data)
+    return supernova_data.SNDataset(
+        override_index_filename=index_filename, override_all_lc_data=lc_data
+    )

@@ -65,8 +65,13 @@ def make_parse_fcn(truth_filename):
     return parse_file
 
 
-def generate_binary_data(dat_files, truth_file, override_index_filename, override_all_lc_data,
-                         print_status=True):
+def generate_binary_data(
+    dat_files,
+    truth_file,
+    override_index_filename,
+    override_all_lc_data,
+    print_status=True
+):
     index_rows = []
     all_values = []  # will be concatenated.
     next_start = 0
@@ -117,7 +122,9 @@ def generate_data_main():
     override_index_filename = index_filename
     override_all_lc_data = all_lc_data
 
-    generate_binary_data(dat_files, truth_file, override_index_filename, override_all_lc_data)
+    generate_binary_data(
+        dat_files, truth_file, override_index_filename, override_all_lc_data
+    )
 
 
 def format_dense_multi_band_from_lc_dict(lc_dict, band_order=('g', 'r', 'i', 'z')):
@@ -142,11 +149,13 @@ def format_dense_multi_band_from_lc_dict(lc_dict, band_order=('g', 'r', 'i', 'z'
     bands = [lc_dict[band] for band in band_order]
 
     # [num_points, num_bands, 3]-shaped array
-    dense_data = np.array([
-        [closest_in_time(band, time) for band in bands]
-        for time in bands[0][:, 0]
-    ], dtype=np.float64)
-    return lightcurve.LC(x=dense_data[:, :, 0], y=dense_data[:, :, 1], yerr=dense_data[:, :, 2])
+    dense_data = np.array([[closest_in_time(band, time)
+                            for band in bands]
+                           for time in bands[0][:, 0]],
+                          dtype=np.float64)
+    return lightcurve.LC(
+        x=dense_data[:, :, 0], y=dense_data[:, :, 1], yerr=dense_data[:, :, 2]
+    )
 
 
 class SNDataset(object):
@@ -157,7 +166,9 @@ class SNDataset(object):
       ids_with_answers: IDs with any answers.
     """
 
-    def __init__(self, override_index_filename=index_filename, override_all_lc_data=all_lc_data):
+    def __init__(
+        self, override_index_filename=index_filename, override_all_lc_data=all_lc_data
+    ):
         with open(override_index_filename, 'rb') as f:
             self.index_df = pickle.load(f)
         self.lc_data = override_all_lc_data.read()
