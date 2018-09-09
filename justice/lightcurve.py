@@ -1,4 +1,5 @@
 import numpy as np
+from math import ceil
 
 
 class BandData(object):
@@ -39,6 +40,36 @@ class _LC:
         assert self._expected_bands == other._expected_bands
         bands = dict((band, self.bands[band] + other.bands[band]) for band in self.bands)
         return self.__class__(**bands)
+
+    def to_arrays(self, band_order=('g', 'r', 'i', 'z')):
+        """
+        Formats this LC to a triple of arrays, suitable for GPy
+        Pads with repeats with the flux_errs much bigger
+        Result is NOT SORTED
+        :param band_order: Order of expected bands.
+        :return: np.array, np.array, np.array
+        """
+
+        if frozenset(self.bands.keys()) != frozenset(band_order):
+            raise ValueError("Unexpected keys {}".format(self.bands.keys()))
+
+        max_size = max(bd.time.shape[0] for bd in self.bands.values())
+        out_time = np.zeros((max_size, len(self.bands)))
+        out_flux = np.zeros((max_size, len(self.bands)))
+        out_flux_err = np.zeros((max_size, len(self.bands)))
+        for i, b in enumerate(band_order):
+            band = self.bands[b]
+            band_len = band.time.shape[0]
+            n_copies = ceil(max_size / band_len)
+            out_time[:, i] = np.concatenate((band.time,) * n_copies)[:max_size]
+            out_flux[:, i] = np.concatenate((band.flux,) * n_copies)[:max_size]
+            if n_copies == 1:
+                out_flux_err[:, i] = band.flux_err
+            else:
+                chunks = (band.flux_err,) + (band.flux_err * 100,) * (n_copies - 1)
+                out_flux_err[:, i] = np.concatenate(chunks)[:max_size]
+
+        return out_time, out_flux, out_flux_err
 
 
 class SNDatasetLC(_LC):
