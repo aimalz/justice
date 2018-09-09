@@ -13,4 +13,4 @@ install:
   # - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
 
 # command to run tests
-script: python -m pytest -s test "$@"
+script: python -m pytest -s test -m "not requires_real_data"
