@@ -68,8 +68,9 @@ class _LC:
             else:
                 chunks = (band.flux_err,) + (band.flux_err * 100,) * (n_copies - 1)
                 out_flux_err[:, i] = np.concatenate(chunks)[:max_size]
+        ordinals = np.argsort(out_time)
 
-        return out_time, out_flux, out_flux_err
+        return out_time[ordinals], out_flux[ordinals], out_flux_err[ordinals]
 
 
 class SNDatasetLC(_LC):
