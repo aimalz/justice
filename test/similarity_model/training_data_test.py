@@ -7,6 +7,7 @@ from __future__ import print_function
 import collections
 
 import numpy as np
+import pytest
 import tensorflow as tf
 
 from justice.similarity_model import training_data
@@ -29,6 +30,7 @@ def test_prefix_function():
     assert get_windowed_samples(4) == [[0, 1, 2, 3], [1, 2, 3, 4]]
 
 
+@pytest.mark.requires_real_data
 def test_positive_negative_mix():
     with tf.Graph().as_default() as g:
         dataset = training_data.sample_data_input_fn({
