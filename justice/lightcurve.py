@@ -1,6 +1,7 @@
 import numpy as np
 from math import ceil
 import scipy.stats as sps
+from collections import OrderedDict
 
 
 class BandData(object):
@@ -34,7 +35,11 @@ class BandData(object):
 
 class _LC:
     def __init__(self, **bands):
-        assert set(bands.keys()) == self._expected_bands
+        d = OrderedDict()
+        for b in self._expected_bands:
+            d[b] = bands[b]
+        for k in bands:
+            assert k in self._expected_bands
         self.bands = bands
 
     @property
@@ -42,7 +47,7 @@ class _LC:
         return len(self.bands)
 
     def _expected_bands(self):
-        return set()
+        return ''
 
     def __repr__(self):
         kwargs = ', '.join(['{}={}'.format(band, data) for band, data in self.bands.items()])
@@ -53,23 +58,19 @@ class _LC:
         bands = dict((band, self.bands[band] + other.bands[band]) for band in self.bands)
         return self.__class__(**bands)
 
-    def to_arrays(self, band_order=('g', 'r', 'i', 'z')):
+    def to_arrays(self):
         """
-        Formats this LC to a triple of arrays, suitable for GPy
+        Formats this LC to a tuple of arrays, suitable for GPy
         Pads with repeats with the flux_errs much bigger
 
         :param band_order: Order of expected bands.
         :return: np.array, np.array, np.array
         """
-
-        if frozenset(self.bands.keys()) != frozenset(band_order):
-            raise ValueError("Unexpected keys {}".format(self.bands.keys()))
-
         max_size = max(bd.time.shape[0] for bd in self.bands.values())
         out_time = np.zeros((max_size, len(self.bands)))
         out_flux = np.zeros((max_size, len(self.bands)))
         out_flux_err = np.zeros((max_size, len(self.bands)))
-        for i, b in enumerate(band_order):
+        for i, b in enumerate(self._expected_bands):
             band = self.bands[b]
             band_len = band.time.shape[0]
             n_copies = ceil(max_size / band_len)
@@ -88,10 +89,11 @@ class _LC:
 class SNDatasetLC(_LC):
     @property
     def _expected_bands(self):
-        return {'g', 'r', 'i', 'z'}
+        return 'griz'
 
 
 class OGLEDatasetLC(_LC):
     @property
     def _expected_bands(self):
-        return {'I', 'V'}
+        return 'IV'
+
