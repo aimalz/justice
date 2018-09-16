@@ -3,8 +3,9 @@
 import GPy
 import numpy as np
 import scipy.optimize as spo
+from tensorflow.contrib.framework import nest
 
-from justice.affine_xform import Aff, transform
+from justice.xform import Xform, transform
 from justice.lightcurve import LC, merge
 
 
@@ -23,20 +24,26 @@ def connect_the_dots(lc):
         sol += np.sum(np.sqrt(x_difs**2 + y_difs**2))
     return sol
 
+def generate_ivals(lc):
+    numbands = lc.x.shape[1]
+    return np.array(nest.flatten([0., 0., 1., 1., [1.,]*numbands]))
 
 def opt_arclen(
     lca,
     lcb,
-    ivals=np.array([0., 0., 1., 1.]),
+    ivals=None,
     constraints=[],
     method='Nelder-Mead',
     options={'maxiter': 10000},
     vb=True,
 ):
+    if ivals is None:
+        ivals = generate_ivals(lca)
+    
     if method != 'Nelder-Mead':
 
-        def pos_dil(aff):
-            return (min(aff.dx, aff.dy))
+        def pos_dil(xform):
+            return (min(xform.dx, xform.dy))
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
@@ -44,12 +51,13 @@ def opt_arclen(
 
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
-        aff = Aff(*vals)
-        lc = transform(lcb, aff)
+        xform = Xform(*vals[0:4],vals[4:])
+        lc = transform(lcb, xform)
         new_lc = merge(lca, lc)
         length = connect_the_dots(new_lc)
         return (length)
 
+    
     # could make this a probability by taking chi^2 error relative to
     # connect_the_dots original, but it didn't work better in the sandbox
     # notebook
@@ -58,8 +66,8 @@ def opt_arclen(
     )
     if vb:
         print(res)
-    res_aff = Aff(*res.x)
-    return (res_aff)
+    res_xform = Xform(*res.x)
+    return (res_xform)
 
 
 def fit_gp(lctrain, kernel=None):
@@ -117,7 +125,7 @@ class OverlapCostComponent(object):
 def opt_gp(
     lca,
     lcb,
-    ivals=np.array([0., 0., 1., 1.]),
+    ivals=None,
     constraints=[],
     method='Nelder-Mead',
     options={'maxiter': 10000},
@@ -129,7 +137,7 @@ def opt_gp(
 
     :param lca: First light curve.
     :param lcb: Second light curve, which will be transformed.
-    :param ivals: Initial values for affine_xform.
+    :param ivals: Initial values for xform.
     :param constraints: List of constraints, only used for certain methods.
     :param method: Scipy optimize method name.
     :param options: Scipy optimize method options, including maxiter.
@@ -137,10 +145,13 @@ def opt_gp(
     :param overlap_cost_fcn: Optional cost function for favoring overlapping curves.
     :param component_sensitivity: Array to scale parameters by. Doesn't seem to
         be affecting/fixing optimizer that much yet.
-    :return: Resulting affine transformation for lcb.
+    :return: Resulting transformation for lcb.
     """
+    if ivals is None:
+        ivals = generate_ivals(lca)
+        
     if component_sensitivity == 'auto':
-        component_sensitivity = Aff(
+        component_sensitivity = Xform(
             tx=np.std(lca.x) + np.std(lcb.x),
             ty=1.0,
             dx=1.0,
@@ -152,8 +163,8 @@ def opt_gp(
 
     if method != 'Nelder-Mead':
         # don't know if this way of handling constraints actually works -- untested!
-        def pos_dil(aff):
-            return (min(aff.dx, aff.dy))
+        def pos_dil(xform):
+            return (min(xform.dx, xform.dy))
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
@@ -162,8 +173,8 @@ def opt_gp(
     def _helper(vals):
         if component_sensitivity is not None:
             vals = vals * component_sensitivity
-        aff = Aff(*vals)
-        lc = transform(lcb, aff)
+        xform = Xform(*vals[0:4],vals[4:])
+        lc = transform(lcb, xform)
         new_lc = merge(lca, lc)
         fin_like = fit_gp(new_lc)
 
@@ -182,4 +193,12 @@ def opt_gp(
 
     if vb:
         print(res)
-    return Aff(*res.x)
+
+    tx = res.x[0]
+    ty = res.x[1]
+    dx = res.x[2]
+    dy = res.x[3]
+    bc = list(res.x[4:])
+
+    resxform = Xform(tx, ty, dx, dy, bc)
+    return resxform

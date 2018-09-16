@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from justice.affine_xform import transform
+from justice.xform import transform
 from justice.lightcurve import merge
 
 # would like to have these pass axes between each other to combine what's being plotted
@@ -75,9 +75,9 @@ def plot_lcs(lcs, save=None):
     return (fig)
 
 
-def plot_arclen_res(lca, lcb, aff, save=None):
+def plot_arclen_res(lca, lcb, xform, save=None):
     fig = plt.figure()
-    lcc = transform(lcb, aff)
+    lcc = transform(lcb, xform)
     lcd = merge(lca, lcc)
     numbands = lca.x.shape[1]
     for i in range(numbands):
