@@ -55,7 +55,7 @@ class _LC:
 
     def to_arrays(self, band_order=('g', 'r', 'i', 'z')):
         """
-        Formats this LC to a triple of arrays, suitable for GPy
+        Formats this LC to a tuple of arrays, suitable for GPy
         Pads with repeats with the flux_errs much bigger
 
         :param band_order: Order of expected bands.
