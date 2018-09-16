@@ -1,5 +1,6 @@
 import numpy as np
 from math import ceil
+import scipy.stats as sps
 
 
 class BandData(object):
@@ -22,6 +23,14 @@ class BandData(object):
         ordinals = np.argsort(times)
         return BandData(times[ordinals], fluxes[ordinals], flux_errs[ordinals])
 
+    @classmethod
+    def from_cadence_shape_and_errfracs(cls, cadence, shape, errfracs):
+        true_fluxes = shape(cadence)
+        error_bars = errfracs * true_fluxes
+        errors = sps.norm(0, error_bars).rvs(true_fluxes.shape)
+        observed_fluxes = true_fluxes + errors
+        return BandData(cadence, observed_fluxes, error_bars)
+
 
 class _LC:
     def __init__(self, **bands):
@@ -29,6 +38,9 @@ class _LC:
         self.bands = bands
 
     @property
+    def nbands(self):
+        return len(self.bands)
+
     def _expected_bands(self):
         return set()
 
@@ -79,7 +91,7 @@ class SNDatasetLC(_LC):
         return {'g', 'r', 'i', 'z'}
 
 
-class OgleDatasetLC(_LC):
+class OGLEDatasetLC(_LC):
     @property
     def _expected_bands(self):
         return {'I', 'V'}
