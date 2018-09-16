@@ -45,7 +45,7 @@ class _LC:
         """
         Formats this LC to a triple of arrays, suitable for GPy
         Pads with repeats with the flux_errs much bigger
-        Result is NOT SORTED
+
         :param band_order: Order of expected bands.
         :return: np.array, np.array, np.array
         """
