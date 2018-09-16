@@ -60,6 +60,8 @@ def build(ogle3_data_dir, ia_descriptor, expected_bands=('I', 'V')):
             data.append(contents)
 
     ia_descriptor.write(index_rows, data)
+    print("Wrote dataset in {} with {} light curves".format(
+        ia_descriptor.index_filename, len(data)))
 
 
 def main():
