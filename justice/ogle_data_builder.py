@@ -24,7 +24,7 @@ def _dat_files(directory):
 
 def parse_lc_line(line):
     hjd, mag, mag_err = map(float, line.strip().split())
-    flux = 10.0 ** (-0.4 * mag)
+    flux = 10.0**(-0.4 * mag)
     flux_err = (mag_err / mag) * flux
     return hjd, flux, flux_err
 
@@ -81,12 +81,13 @@ def build(ogle3_data_dir, ia_descriptor, expected_bands=('I', 'V'), star_table=N
                 contents = list(map(parse_lc_line, f.read().strip().splitlines()))
             data.append(contents)
 
-    ia_descriptor.write(index_rows, data)
-    print(
-        "Wrote dataset in {} with {} light curves".format(
-            ia_descriptor.index_filename, len(data)
+    ia_descriptor.write(index_rows, data, set_index='id')
+    if "pytest" not in ia_descriptor.index_filename:
+        print(
+            "Wrote dataset in {} with {} light curves".format(
+                ia_descriptor.index_filename, len(data)
+            )
         )
-    )
 
 
 def main():
