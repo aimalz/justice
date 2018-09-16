@@ -77,3 +77,9 @@ class SNDatasetLC(_LC):
     @property
     def _expected_bands(self):
         return {'g', 'r', 'i', 'z'}
+
+
+class OgleDatasetLC(_LC):
+    @property
+    def _expected_bands(self):
+        return {'I', 'V'}
