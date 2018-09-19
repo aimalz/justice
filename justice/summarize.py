@@ -6,7 +6,6 @@ import scipy.optimize as spo
 from tensorflow.contrib.framework import nest
 
 from justice.xform import Xform, transform
-from justice.lightcurve import LC, merge
 
 
 def lineup(lca, lcb):
@@ -14,19 +13,9 @@ def lineup(lca, lcb):
     # do this on coarse grid, then refine
     pass
 
-
-def connect_the_dots(lc):
-    # ignores errorbars
-    sol = 0.
-    for x, y, yerr in zip(lc.x.T, lc.y.T, lc.yerr.T):
-        x_difs = (x[1:] - x[:-1])
-        y_difs = y[1:] - y[:-1]
-        sol += np.sum(np.sqrt(x_difs**2 + y_difs**2))
-    return sol
-
 def generate_ivals(lc):
-    numbands = lc.x.shape[1]
-    return np.array(nest.flatten([0., 0., 1., 1., [1.,]*numbands]))
+    numbands = lc.nbands
+    return np.array(nest.flatten(lc.get_xform()))
 
 def opt_arclen(
     lca,
@@ -51,11 +40,11 @@ def opt_arclen(
 
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
-        xform = Xform(*vals[0:4],vals[4:])
+        xform = lc.get_xform(vals=vals)
         lc = transform(lcb, xform)
-        new_lc = merge(lca, lc)
-        length = connect_the_dots(new_lc)
-        return (length)
+        new_lc = lca + lc
+        length = new_lc.connect_the_dots()
+        return length
 
     
     # could make this a probability by taking chi^2 error relative to
@@ -66,19 +55,19 @@ def opt_arclen(
     )
     if vb:
         print(res)
-    res_xform = Xform(*res.x)
-    return (res_xform)
+    res_xform = lca.get_xform(res.x)
+    return res_xform
 
 
 def fit_gp(lctrain, kernel=None):
-    gp = GPy.models.gp_regression.GPRegression(lctrain.x, lctrain.y, normalizer=True)
+    gp = GPy.models.gp_regression.GPRegression(lctrain.to_arrays(), normalizer=True)
     gp.optimize()
 
     return gp.log_likelihood()
 
 
 def pred_gp(lctrain, xpred, kernel=None):
-    gp = GPy.models.gp_regression.GPRegression(lctrain.x, lctrain.y, normalizer=True)
+    gp = GPy.models.gp_regression.GPRegression(lctrain.toarrays(), normalizer=True)
     gp.optimize()
     ypred, yvarpred = gp.predict(xpred)
     lcpred = LC(xpred, ypred, np.sqrt(yvarpred))
@@ -173,9 +162,9 @@ def opt_gp(
     def _helper(vals):
         if component_sensitivity is not None:
             vals = vals * component_sensitivity
-        xform = Xform(*vals[0:4],vals[4:])
+        xform = lc.get_xform(vals=vals)
         lc = transform(lcb, xform)
-        new_lc = merge(lca, lc)
+        new_lc = lca + lc
         fin_like = fit_gp(new_lc)
 
         overlap_cost = 0.0
@@ -194,11 +183,5 @@ def opt_gp(
     if vb:
         print(res)
 
-    tx = res.x[0]
-    ty = res.x[1]
-    dx = res.x[2]
-    dy = res.x[3]
-    bc = list(res.x[4:])
-
-    resxform = Xform(tx, ty, dx, dy, bc)
+    resxform = lca.get_xform(res.x)
     return resxform

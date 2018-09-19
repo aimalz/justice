@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from justice import xform, lightcurve
+from justice import xform, lightcurve, simulate
 
 
 def test_defaulting():
@@ -25,12 +25,8 @@ def test_to_and_from_array():
 
 
 def test_transform():
-    tf = xform.Xform(tx=-3215, ty=0.2, dx=10.0, dy=2.0, bc=[1.,])
-    lca = lightcurve.LC(
-        x=np.array([[3215], [3217]], dtype=np.float64),
-        y=np.array([[12], [17]], dtype=np.float64),
-        yerr=np.array([[1.0], [0.1]], dtype=np.float64),
-    )
+    tf = xform.Xform(tx=-3215, ty=0.2, dx=10.0, dy=2.0, bc={'b':1.})
+    lca = simulate.TestLC.make_super_easy()
     lc = tf.transform(lca)
-    assert lc.x[0, 0] == 0.0
-    assert lc.x[1, 0] == 20
+    assert lc.bands['b'].time[0] == 0.0
+    assert lc.bands['b'].time[1] == 20

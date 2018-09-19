@@ -2,7 +2,7 @@ import numpy as np
 from math import ceil
 import scipy.stats as sps
 from collections import OrderedDict
-
+from justice.xform import Xform
 
 class BandData(object):
     def __init__(self, time, flux, flux_err):
@@ -31,6 +31,12 @@ class BandData(object):
         errors = sps.norm(0, error_bars).rvs(true_fluxes.shape)
         observed_fluxes = true_fluxes + errors
         return BandData(cadence, observed_fluxes, error_bars)
+
+    def connect_the_dots(self):
+        #ignores errorbars
+        time_difs = time[1:] - time[:-1]
+        flux_difs = flux[1:] - flux[:-1]
+        return np.sum(np.sqrt(time_diffs**2 + flux_diffs**2))
 
 
 class _LC:
@@ -84,6 +90,30 @@ class _LC:
         ordinals = np.argsort(out_time)
 
         return out_time[ordinals], out_flux[ordinals], out_flux_err[ordinals]
+
+    def get_xform(self, vals=None):
+        if vals is None:
+            vals[0]=0.
+            vals[1]=0.
+            vals[2]=1.
+            vals[3]=1.
+            for b in self._expected_bands:
+                vals.append(1.)
+        tx = vals[0]
+        ty = vals[1]
+        dx = vals[2]
+        dy = vals[3]
+        bc = OrderedDict()
+        for b, val in zip(self._expected_bands, vals[4:]):
+            bc[b]=val
+        return Xform(tx, ty, dx, dy, bc)
+
+    def connect_the_dots(self):
+        # ignores errorbars
+        arclen = 0.
+        for b in self._expected_bands:
+            arclen += self.bands[b].connect_the_dots()
+        return arclen
 
 
 class SNDatasetLC(_LC):

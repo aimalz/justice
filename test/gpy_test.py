@@ -6,15 +6,7 @@ import justice.xform as xform
 
 
 def test_gpy():
-    def_cadence = [
-        np.arange(0., 500., 25.),
-    ] * 2
-    gmodel = sim.make_gauss([100., 100.], [300., 600.], [5., 5.], [1., 1.])
-    gtimes = sim.make_cadence(def_cadence, [0.5, 0.5])
-    gtrue = gmodel(gtimes)
-    gphot, gerr = sim.apply_err(gtrue, [0.1, 0.1])
-
-    glc = sim.LC(gtimes, gphot, gerr)
+    glc = sim.TestLC.make_hard_gauss()
 
     aff = xform.Xform(50., 1., 1., 1.5, [1.,1.])
     glc2 = xform.transform(glc, aff)
@@ -23,15 +15,7 @@ def test_gpy():
 
 
 def test_gpy_with_overlap_cost():
-    def_cadence = [
-        np.arange(0., 500., 25.),
-    ] * 2
-    gmodel = sim.make_gauss([100., 100.], [300., 600.], [5., 5.], [1., 1.])
-    gtimes = sim.make_cadence(def_cadence, [0.5, 0.5])
-    gtrue = gmodel(gtimes)
-    gphot, gerr = sim.apply_err(gtrue, [0.1, 0.1])
-
-    glc = sim.LC(gtimes, gphot, gerr)
+    glc = sim.TestLC.make_hard_gauss()
 
     aff = xform.Xform(50., 1., 1., 1.5, [1.,1.])
     glc2 = xform.transform(glc, aff)

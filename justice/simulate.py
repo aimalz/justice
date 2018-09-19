@@ -63,7 +63,7 @@ class TestLC(_LC):
     @classmethod
     def make_hard_gauss(cls):
         gauss_fcn = make_gauss_shape_fn(1.5, 1, 1.2, .3)
-        xs = make_cadence(np.arange(0, 11.5, .1), [0.1] * 115)
+        xs = make_cadence(np.arange(0, 11.5, .1), [0.05] * 115)
 
         band = BandData.from_cadence_shape_and_errfracs(xs, gauss_fcn, [0.2] * 115)
         return TestLC(b=band)
