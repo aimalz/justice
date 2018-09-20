@@ -30,7 +30,7 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
         new_x = self.dx * (bd.time + self.tx)
         new_y = self.dy * (bd.flux + self.ty)
         new_yerr = np.sqrt(self.dy) * bd.flux_err
-        return BandData(new_x, new_y, new_yerr)
+        return bd.__class__(new_x, new_y, new_yerr)
 
     def transform(self, lc):
         bands = {b: self.transform_band(lc.bands[b], self.bc[b]) for b in lc.bands}

@@ -162,7 +162,7 @@ def opt_gp(
     def _helper(vals):
         if component_sensitivity is not None:
             vals = vals * component_sensitivity
-        xform = lc.get_xform(vals=vals)
+        xform = lca.get_xform(vals=vals)
         lc = transform(lcb, xform)
         new_lc = lca + lc
         fin_like = fit_gp(new_lc)

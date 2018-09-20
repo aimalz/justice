@@ -93,10 +93,11 @@ class _LC:
 
     def get_xform(self, vals=None):
         if vals is None:
-            vals[0]=0.
-            vals[1]=0.
-            vals[2]=1.
-            vals[3]=1.
+            vals = []
+            vals.append(0.)
+            vals.append(0.)
+            vals.append(1.)
+            vals.append(1.)
             for b in self._expected_bands:
                 vals.append(1.)
         tx = vals[0]
