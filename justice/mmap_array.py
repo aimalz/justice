@@ -89,11 +89,12 @@ class IndexedArrayDescriptor(object):
             index_df = pickle.load(f)
         return IndexedArray(index_df=index_df, lc_data=self.all_lc_data.read())
 
-    def write(self, index_rows, data):
+    def write(self, index_rows, data, set_index=None):
         """Writes parsed data.
 
-        :param index_rows:
-        :param data:
+        :param index_rows: List of dicts, each with information about each sub-array.
+        :param data: List of sub-arrays; each sub-array is a list of (time, flux, flux_err) values.
+        :param set_index: Name of column to use as data frame index.
         """
         if len(index_rows) != len(data):
             raise ValueError("Number of index rows must match number of data elements")
@@ -109,6 +110,8 @@ class IndexedArrayDescriptor(object):
         index_df = pd.DataFrame.from_records(index_rows)
         index_df['start'] = np.array(start_indices[:-1], dtype=np.int64)
         index_df['end'] = np.array(start_indices[1:], dtype=np.int64)
+        if set_index is not None:
+            index_df = index_df.set_index(set_index)
         with open(self.index_filename, 'wb') as f:
             pickle.dump(index_df, f, protocol=2)
 
