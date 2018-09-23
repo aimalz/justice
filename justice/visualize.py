@@ -36,8 +36,8 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
     """
 
     if colors is None:
-        colors=_default_colors[0:len(lc.bands)]
-    
+        colors = _default_colors[0:len(lc.bands)]
+
     fig = plt.figure(figsize=figsize)
     plt.title(title)
 
