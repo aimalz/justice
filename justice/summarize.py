@@ -3,9 +3,10 @@
 import GPy
 import numpy as np
 import scipy.optimize as spo
+from tensorflow.contrib.framework import nest
 
-from justice.affine_xform import Aff, transform
-from justice.lightcurve import LC, merge
+from justice import lightcurve
+from justice import xform
 
 
 def lineup(lca, lcb):
@@ -14,29 +15,45 @@ def lineup(lca, lcb):
     pass
 
 
-def connect_the_dots(lc):
-    # ignores errorbars
-    sol = 0.
-    for x, y, yerr in zip(lc.x.T, lc.y.T, lc.yerr.T):
-        x_difs = (x[1:] - x[:-1])
-        y_difs = y[1:] - y[:-1]
-        sol += np.sum(np.sqrt(x_difs**2 + y_difs**2))
-    return sol
+def generate_ivals(lc: lightcurve._LC) -> np.ndarray:
+    """
+    Generate starting values for optimization
+
+    :param lc: Starting lightcurve
+    :return: flattened list of xform parameters
+    """
+    numbands = lc.nbands
+    return np.array(nest.flatten(lc.get_xform()))
 
 
 def opt_arclen(
-    lca,
-    lcb,
-    ivals=np.array([0., 0., 1., 1.]),
+    lca: lightcurve._LC,
+    lcb: lightcurve._LC,
+    ivals=None,
     constraints=[],
     method='Nelder-Mead',
     options={'maxiter': 10000},
     vb=True,
-):
+) -> xform.Xform:
+    """
+    Minimizes the arclength between two lightcurves after merging
+
+    :param lca: First lightcurve.
+    :param lcb: Lightcurve to try merging in
+    :param ivals: initial values to try
+    :param constraints: Not sure how these work, feel free to give it a try though!
+    :param method: Only Nelder_Mead is tested as of now
+    :param options: Only maxiter is included right now
+    :param vb: Boolean verbose
+    :return: best xform
+    """
+    if ivals is None:
+        ivals = generate_ivals(lca)
+
     if method != 'Nelder-Mead':
 
-        def pos_dil(aff):
-            return (min(aff.dx, aff.dy))
+        def pos_dil(xform):
+            return (min(xform.dx, xform.dy))
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
@@ -44,11 +61,11 @@ def opt_arclen(
 
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
-        aff = Aff(*vals)
-        lc = transform(lcb, aff)
-        new_lc = merge(lca, lc)
-        length = connect_the_dots(new_lc)
-        return (length)
+        lca_xform = lca.get_xform(vals=vals)
+        lc = xform.transform(lcb, lca_xform)
+        new_lc = lca + lc
+        length = new_lc.connect_the_dots()
+        return length
 
     # could make this a probability by taking chi^2 error relative to
     # connect_the_dots original, but it didn't work better in the sandbox
@@ -58,19 +75,21 @@ def opt_arclen(
     )
     if vb:
         print(res)
-    res_aff = Aff(*res.x)
-    return (res_aff)
+    res_xform = lca.get_xform(res.x)
+    return res_xform
 
 
 def fit_gp(lctrain, kernel=None):
-    gp = GPy.models.gp_regression.GPRegression(lctrain.x, lctrain.y, normalizer=True)
+    gpy_data = lctrain.to_arrays()
+    gp = GPy.models.gp_regression.GPRegression(gpy_data[0], gpy_data[1], normalizer=True)
     gp.optimize()
 
     return gp.log_likelihood()
 
 
 def pred_gp(lctrain, xpred, kernel=None):
-    gp = GPy.models.gp_regression.GPRegression(lctrain.x, lctrain.y, normalizer=True)
+    gpy_data = lctrain.to_arrays()
+    gp = GPy.models.gp_regression.GPRegression(gpy_data[0], gpy_data[1], normalizer=True)
     gp.optimize()
     ypred, yvarpred = gp.predict(xpred)
     lcpred = LC(xpred, ypred, np.sqrt(yvarpred))
@@ -100,24 +119,37 @@ class OverlapCostComponent(object):
         )
         self.cost_base = np.linspace(0, 1, len(cost_percentiles))
 
-    def cost(self, lca, lcb):
-        min_lca, max_lca = np.min(lca.x), np.max(lca.x)
-        min_lcb, max_lcb = np.min(lcb.x), np.max(lcb.x)
+    def cost(self, lca: lightcurve._LC, lcb: lightcurve._LC) -> float:
+        """
+
+        :param lca: First light curve.
+        :param lcb: Second light curve.
+        :return:
+        """
+
+        def _time_bounds(lc):
+            return (
+                min(np.min(band.time) for band in lc.bands.values()),
+                max(np.max(band.time) for band in lc.bands.values()),
+            )
+
+        min_lca, max_lca = _time_bounds(lca)
+        min_lcb, max_lcb = _time_bounds(lcb)
         overlap = min(max_lca, max_lcb) - max(min_lca, min_lcb)
         if overlap <= 0:
             return self.cost_outside
         else:
-            overlap_percent = (2 * overlap) / (
-                (max_lca - min_lca) + (max_lcb - min_lcb)
-            )
+            overlap_percent = (2 * overlap) / ((max_lca - min_lca) + (max_lcb - min_lcb))
             assert 0.0 <= overlap_percent <= 1.0
-            return np.interp(x=overlap_percent, xp=self.cost_base, fp=self.cost_percentiles)
+            return np.interp(
+                x=overlap_percent, xp=self.cost_base, fp=self.cost_percentiles
+            )
 
 
 def opt_gp(
     lca,
     lcb,
-    ivals=np.array([0., 0., 1., 1.]),
+    ivals=None,
     constraints=[],
     method='Nelder-Mead',
     options={'maxiter': 10000},
@@ -129,7 +161,7 @@ def opt_gp(
 
     :param lca: First light curve.
     :param lcb: Second light curve, which will be transformed.
-    :param ivals: Initial values for affine_xform.
+    :param ivals: Initial values for xform.
     :param constraints: List of constraints, only used for certain methods.
     :param method: Scipy optimize method name.
     :param options: Scipy optimize method options, including maxiter.
@@ -137,10 +169,13 @@ def opt_gp(
     :param overlap_cost_fcn: Optional cost function for favoring overlapping curves.
     :param component_sensitivity: Array to scale parameters by. Doesn't seem to
         be affecting/fixing optimizer that much yet.
-    :return: Resulting affine transformation for lcb.
+    :return: Resulting transformation for lcb.
     """
+    if ivals is None:
+        ivals = generate_ivals(lca)
+
     if component_sensitivity == 'auto':
-        component_sensitivity = Aff(
+        component_sensitivity = xform.Xform(
             tx=np.std(lca.x) + np.std(lcb.x),
             ty=1.0,
             dx=1.0,
@@ -152,8 +187,8 @@ def opt_gp(
 
     if method != 'Nelder-Mead':
         # don't know if this way of handling constraints actually works -- untested!
-        def pos_dil(aff):
-            return (min(aff.dx, aff.dy))
+        def pos_dil(xform):
+            return (min(xform.dx, xform.dy))
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
@@ -162,9 +197,9 @@ def opt_gp(
     def _helper(vals):
         if component_sensitivity is not None:
             vals = vals * component_sensitivity
-        aff = Aff(*vals)
-        lc = transform(lcb, aff)
-        new_lc = merge(lca, lc)
+        lca_xform = lca.get_xform(vals=vals)
+        lc = xform.transform(lcb, lca_xform)
+        new_lc = lca + lc
         fin_like = fit_gp(new_lc)
 
         overlap_cost = 0.0
@@ -182,4 +217,6 @@ def opt_gp(
 
     if vb:
         print(res)
-    return Aff(*res.x)
+
+    resxform = lca.get_xform(res.x)
+    return resxform

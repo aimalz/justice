@@ -2,8 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from justice.affine_xform import transform
-from justice.lightcurve import merge
+from justice import xform
 
 # would like to have these pass axes between each other to combine what's being plotted
 # also want to accommodate multiple filters/bands of y
@@ -25,7 +24,7 @@ _default_colors = (
 )
 
 
-def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=_default_colors):
+def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
     """Plot helper, usually call this from iPython.
 
     :param lc: LC object.
@@ -33,19 +32,24 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=_default_color
     :param figsize: Figure size tuple.
     :param colors: Tuple of colors for each band.
     """
+
+    if colors is None:
+        colors = _default_colors[0:len(lc.bands)]
+
     fig = plt.figure(figsize=figsize)
     plt.title(title)
 
-    if len(colors) != lc.x.shape[1]:
+    if len(colors) != len(lc.bands):
         raise ValueError(
             "Have {} colors but {} bands".format(
-                len(colors), lc.x.shape[1]))
+                len(colors), len(
+                    lc.bands)))
 
-    for band_idx, color in enumerate(colors):
+    for band, color in zip(lc.bands, colors):
         plt.errorbar(
-            lc.x[:, band_idx],
-            lc.y[:, band_idx],
-            yerr=lc.yerr[:, band_idx],
+            lc.bands[band].time,
+            lc.bands[band].flux,
+            yerr=lc.bands[band].flux_err,
             fmt='o',
             color=color
         )
@@ -53,68 +57,96 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=_default_color
 
 
 def plot_lcs(lcs, save=None):
+    """Plot multiple (or single) lightcurves at once
+
+    :param lcs: list of lightcurves
+    :param save: boolean to save or not
+    :return: figure object
+    """
     # This needs a way to have names of the bands, but it works for now.
     if not isinstance(lcs, list):
         lcs = [lcs]
     fig = plt.figure()
-    numbands = lcs[0].x.shape[1]
-    for i in range(numbands):
+    numbands = lcs[0].nbands
+    bands = lcs[0].bands
+    for i, b in enumerate(bands):
         plt.subplot(numbands, 1, i + 1)
         for lci in lcs:
             plt.errorbar(
-                lci.x[:, i],
-                lci.y[:, i],
-                yerr=lci.yerr[:, i],
+                lci.bands[b].time,
+                lci.bands[b].flux,
+                yerr=lci.bands[b].flux_err,
                 linestyle='None',
                 marker='.'
             )
     plt.xlabel('time')
-    plt.ylabel('brightness')
+    plt.ylabel('flux')
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return (fig)
 
 
-def plot_arclen_res(lca, lcb, aff, save=None):
+def plot_arclen_res(lca, lcb, xforma, save=None):
+    """
+    Plot the result of a trial merger for arclen
+
+    :param lca: Original lightcurve
+    :param lcb: Lightcurve to merge
+    :param xforma: Transform to show
+    :param save: save fig or not
+    :return: figure
+    """
     fig = plt.figure()
-    lcc = transform(lcb, aff)
-    lcd = merge(lca, lcc)
-    numbands = lca.x.shape[1]
-    for i in range(numbands):
+    lcc = xforma.transform(lcb)
+    lcd = lca + lcc
+    numbands = lca.nbands
+    for i, b in enumerate(lca.bands):
+        lcab = lca.bands[b]
+        lcbb = lcb.bands[b]
+        lccb = lcc.bands[b]
+        lcdb = lcd.bands[b]
         plt.subplot(numbands, 1, i + 1)
-        plt.errorbar(lca.x[:, i], lca.y[:, i], yerr=lca.yerr[:, i], label='reference')
-        plt.errorbar(lcb.x[:, i], lcb.y[:, i], yerr=lcb.yerr[:, i], label='proposal')
-        plt.errorbar(lcc.x[:, i], lcc.y[:, i], yerr=lcc.yerr[:, i], label='transformed')
-        plt.errorbar(lcd.x[:, i], lcd.y[:, i], yerr=lcd.yerr[:, i], label='merged')
+        plt.errorbar(lcab.time, lcab.flux, yerr=lcab.flux_err, label='reference')
+        plt.errorbar(lcbb.time, lcbb.flux, yerr=lcbb.flux_err, label='proposal')
+        plt.errorbar(lccb.time, lccb.flux, yerr=lccb.flux_err, label='transformed')
+        plt.errorbar(lcdb.time, lcdb.flux, yerr=lcdb.flux_err, label='merged')
     plt.legend()
     plt.xlabel('time')
     plt.ylabel('brightness')
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
-    return (fig)
+    return fig
 
 
 def plot_gp_res(lctrain, lcpred, save=None):
+    """
+    Plots the results of a Gaussian Process fit
+
+    :param lctrain: The light curve trained on
+    :param lcpred: Predicted light curve
+    :param save: save figure or not
+    :return: figure
+    """
     fig = plt.figure()
-    numbands = lctrain.x.shape[1]
-    for i in range(numbands):
+    numbands = lctrain.nbands
+    for i, b in enumerate(lctrain.bands):
         plt.subplot(numbands, 1, i + 1)
         plt.fill_between(
-            lcpred.x[:, i],
-            lcpred.y[:, i] - lcpred.yerr[:, i],
-            lcpred.y[:, i] + lcpred.yerr[:, i],
+            lcpred.bands[b].time,
+            lcpred.bands[b].flux - lcpred.bands[b].flux_err,
+            lcpred.bands[b].flux + lcpred.bands[b].flux_err,
             alpha=0.1
         )
-        plt.plot(lcpred.x[:, i], lcpred.y[:, i])
+        plt.plot(lcpred.bands[b].time, lcpred.bands[b].flux)
         plt.errorbar(
-            lctrain.x[:, i],
-            lctrain.y[:, i],
-            yerr=lctrain.yerr[:, i],
+            lctrain.bands[b].time,
+            lctrain.bands[b].flux,
+            yerr=lctrain.bands[b].flux_err,
             linestyle='None',
             marker='.'
         )
     plt.xlabel('time')
-    plt.ylabel('brightness')
+    plt.ylabel('flux')
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
-    return (fig)
+    return fig

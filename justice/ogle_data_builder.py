@@ -5,9 +5,9 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-import re
 import os
 import os.path
+import re
 
 import pandas as pd
 

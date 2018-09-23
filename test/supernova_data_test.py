@@ -35,6 +35,9 @@ def test_lc_dict_for_id(sn_dataset):
 def test_format_dense_multi_band_lc(sn_dataset):
     dct = sn_dataset.lc_dict_for_id(92234)
     lc = supernova_data.format_dense_multi_band_from_lc_dict(dct)
-    first_times_all_channels = lc.x[0]
+    first_times_all_channels = [band.time[0] for band in lc.bands.values()]
+    all_shapes = frozenset(array.shape for array in first_times_all_channels)
+    assert len(all_shapes) == 1
+    first_times_all_channels = np.stack(first_times_all_channels, axis=0)
     assert (np.max(first_times_all_channels) - np.min(first_times_all_channels)) < 1.0
     assert 56177.0 < first_times_all_channels[0] < 56179.0

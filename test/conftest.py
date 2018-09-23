@@ -8,6 +8,7 @@ import glob
 import os
 import shutil
 import tempfile
+
 import pytest
 
 from justice import mmap_array, supernova_data

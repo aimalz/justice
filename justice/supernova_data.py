@@ -7,12 +7,14 @@ from __future__ import print_function
 import argparse
 import glob
 import os.path
-import sys
 import pickle
+import sys
+import typing
 
 import numpy as np
 import pandas as pd
 
+from justice import lightcurve
 from justice import mmap_array
 
 sn_dir = os.path.join(mmap_array.default_array_dir, 'sn_phot_cc')
@@ -127,7 +129,9 @@ def generate_data_main():
     )
 
 
-def format_dense_multi_band_from_lc_dict(lc_dict, band_order=('g', 'r', 'i', 'z')):
+def format_dense_multi_band_from_lc_dict(lc_dict,
+                                         band_order=('g', 'r', 'i',
+                                                     'z')) -> lightcurve.SNDatasetLC:
     """Formats a multi-band LC dictionary to a dense dataset.
 
     Currently reformats a time series to dense data, as if every curve had sampled at the same time.
@@ -135,9 +139,8 @@ def format_dense_multi_band_from_lc_dict(lc_dict, band_order=('g', 'r', 'i', 'z'
 
     :param lc_dict: Dictionary from lc_dict_for_id.
     :param band_order: Order of expected bands.
-    :return: lightcurve.LC object.
+    :return: Light curve.
     """
-    from justice import lightcurve
     if frozenset(lc_dict.keys()) != frozenset(band_order):
         raise ValueError("Unexpected keys {}".format(lc_dict.keys()))
 
@@ -153,9 +156,15 @@ def format_dense_multi_band_from_lc_dict(lc_dict, band_order=('g', 'r', 'i', 'z'
                             for band in bands]
                            for time in bands[0][:, 0]],
                           dtype=np.float64)
-    return lightcurve.LC(
-        x=dense_data[:, :, 0], y=dense_data[:, :, 1], yerr=dense_data[:, :, 2]
-    )
+
+    band_data: typing.Dict[str, lightcurve.BandData] = {}
+    for i, band in enumerate(band_order):
+        band_data[band] = lightcurve.BandData(
+            time=dense_data[:, i, 0],
+            flux=dense_data[:, i, 1],
+            flux_err=dense_data[:, i, 2]
+        )
+    return lightcurve.SNDatasetLC(**band_data)
 
 
 class SNDataset(object):

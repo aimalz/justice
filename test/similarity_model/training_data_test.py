@@ -19,14 +19,21 @@ def test_prefix_function():
     assert (diffs == (time_samples[1:] - time_samples[:-1])).all()
 
     def get_windowed_samples(window_size):
-        start_indices = training_data.get_window_valid_indices(diffs, 0.8, 1.2, window_size)
+        start_indices = training_data.get_window_valid_indices(
+            diffs, 0.8, 1.2, window_size
+        )
         results = []
         for start_idx in start_indices:
-            results.append([int(sample) for sample in time_samples[start_idx:(start_idx + window_size)]])
+            results.append([
+                int(sample)
+                for sample in time_samples[start_idx:(start_idx + window_size)]
+            ])
         return results
 
-    assert get_windowed_samples(1) == [[0], [1], [2], [3], [4], [10], [11], [12], [12], [13], [14]]
-    assert get_windowed_samples(3) == [[0, 1, 2], [1, 2, 3], [2, 3, 4], [10, 11, 12], [12, 13, 14]]
+    assert get_windowed_samples(1) == [[0], [1], [2], [3], [4], [10], [11], [12], [12],
+                                       [13], [14]]
+    assert get_windowed_samples(3) == [[0, 1, 2], [1, 2, 3], [2, 3, 4], [10, 11, 12],
+                                       [12, 13, 14]]
     assert get_windowed_samples(4) == [[0, 1, 2, 3], [1, 2, 3, 4]]
 
 
@@ -58,7 +65,7 @@ def test_positive_negative_mix():
                 same_lc_same_window += len(num_diff) - sum(num_diff)
 
         # Each batch is either all positives or negatives.
-        assert all_counts == {((0.0, 8),), ((1.0, 8),)}
+        assert all_counts == {((0.0, 8), ), ((1.0, 8), )}
 
         assert same_lc_diff_window > 0
         assert same_lc_diff_window >= 10 * same_lc_same_window, (
