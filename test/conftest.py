@@ -21,6 +21,11 @@ def _get_dat_files():
     return files
 
 
+@pytest.fixture()
+def testdata_dir():
+    return _testdata_dir
+
+
 @pytest.fixture(scope="session")
 def sn_index_and_mmap_file():
     temp_dir = tempfile.mkdtemp()
