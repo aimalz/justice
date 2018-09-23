@@ -24,7 +24,7 @@ _default_colors = (
 )
 
 
-def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=_default_colors):
+def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
     """Plot helper, usually call this from iPython.
 
     :param lc: LC object.
@@ -32,6 +32,10 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=_default_color
     :param figsize: Figure size tuple.
     :param colors: Tuple of colors for each band.
     """
+
+    if colors is None:
+        colors = _default_colors[0:len(lc.bands)]
+
     fig = plt.figure(figsize=figsize)
     plt.title(title)
 
@@ -43,9 +47,9 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=_default_color
 
     for band, color in zip(lc.bands, colors):
         plt.errorbar(
-            lc.x[:, band_idx],
-            lc.y[:, band_idx],
-            yerr=lc.yerr[:, band_idx],
+            lc.bands[band].time,
+            lc.bands[band].flux,
+            yerr=lc.bands[band].flux_err,
             fmt='o',
             color=color
         )
