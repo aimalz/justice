@@ -57,6 +57,12 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
 
 
 def plot_lcs(lcs, save=None):
+    """Plot multiple (or single) lightcurves at once
+
+    :param lcs: list of lightcurves
+    :param save: boolean to save or not
+    :return: figure object
+    """
     # This needs a way to have names of the bands, but it works for now.
     if not isinstance(lcs, list):
         lcs = [lcs]
@@ -81,6 +87,15 @@ def plot_lcs(lcs, save=None):
 
 
 def plot_arclen_res(lca, lcb, xforma, save=None):
+    """
+    Plot the result of a trial merger for arclen
+
+    :param lca: Original lightcurve
+    :param lcb: Lightcurve to merge
+    :param xforma: Transform to show
+    :param save: save fig or not
+    :return: figure
+    """
     fig = plt.figure()
     lcc = xforma.transform(lcb)
     lcd = lca + lcc
@@ -105,25 +120,25 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
 
 def plot_gp_res(lctrain, lcpred, save=None):
     fig = plt.figure()
-    numbands = lctrain.x.shape[1]
-    for i in range(numbands):
+    numbands = lctrain.nbands
+    for i, b in enumerate(lctrain.bands):
         plt.subplot(numbands, 1, i + 1)
         plt.fill_between(
-            lcpred.x[:, i],
-            lcpred.y[:, i] - lcpred.yerr[:, i],
-            lcpred.y[:, i] + lcpred.yerr[:, i],
+            lcpred.bands[b].time,
+            lcpred.bands[b].flux - lcpred.bands[b].flux_err,
+            lcpred.bands[b].flux + lcpred.bands[b].flux_err,
             alpha=0.1
         )
-        plt.plot(lcpred.x[:, i], lcpred.y[:, i])
+        plt.plot(lcpred.bands[b].time, lcpred.bands[b].flux)
         plt.errorbar(
-            lctrain.x[:, i],
-            lctrain.y[:, i],
-            yerr=lctrain.yerr[:, i],
+            lctrain.bands[b].time,
+            lctrain.bands[b].flux,
+            yerr=lctrain.bands[b].flux_err,
             linestyle='None',
             marker='.'
         )
     plt.xlabel('time')
-    plt.ylabel('brightness')
+    plt.ylabel('flux')
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return fig

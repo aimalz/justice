@@ -15,20 +15,38 @@ def lineup(lca, lcb):
     pass
 
 
-def generate_ivals(lc):
+def generate_ivals(lc: lightcurve._LC) -> np.ndarray:
+    """
+    Generate starting values for optimization
+
+    :param lc: Starting lightcurve
+    :return: flattened list of xform parameters
+    """
     numbands = lc.nbands
     return np.array(nest.flatten(lc.get_xform()))
 
 
 def opt_arclen(
-    lca,
-    lcb,
+    lca: lightcurve._LC,
+    lcb: lightcurve._LC,
     ivals=None,
     constraints=[],
     method='Nelder-Mead',
     options={'maxiter': 10000},
     vb=True,
-):
+) -> xform.Xform:
+    """
+    Minimizes the arclength between two lightcurves after merging
+
+    :param lca: First lightcurve.
+    :param lcb: Lightcurve to try merging in
+    :param ivals: initial values to try
+    :param constraints: Not sure how these work, feel free to give it a try though!
+    :param method: Only Nelder_Mead is tested as of now
+    :param options: Only maxiter is included right now
+    :param vb: Boolean verbose
+    :return: best xform
+    """
     if ivals is None:
         ivals = generate_ivals(lca)
 

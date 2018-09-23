@@ -25,3 +25,10 @@ def test_plot_arclen_res():
     xform1 = glc1.get_xform()
 
     vis.plot_arclen_res(glc1, glc2, xform1)
+
+
+def test_plot_gp_res():
+    glc1 = sim.TestLC.make_easy_gauss()
+    glc2 = sim.TestLC.make_hard_gauss()
+
+    vis.plot_gp_res(glc1, glc2)
