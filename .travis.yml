@@ -1,0 +1,16 @@
+language: python
+
+python:
+  - "3.6"
+
+# command to install dependencies
+install:
+  - pip install tensorflow
+  - pip install autopep8 ipython jupyter matplotlib pandas pytest scipy yapf
+  - pip install george
+  - pip install gpy
+  # Temporal solution to travis issue #155
+  # - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
+
+# command to run tests
+script: python -m pytest -s test -m "not requires_real_data"
