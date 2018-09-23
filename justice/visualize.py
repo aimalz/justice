@@ -63,19 +63,20 @@ def plot_lcs(lcs, save=None):
     if not isinstance(lcs, list):
         lcs = [lcs]
     fig = plt.figure()
-    numbands = lcs[0].x.shape[1]
-    for i in range(numbands):
+    numbands = lcs[0].nbands
+    bands = lcs[0].bands
+    for i, b in enumerate(bands):
         plt.subplot(numbands, 1, i + 1)
         for lci in lcs:
             plt.errorbar(
-                lci.x[:, i],
-                lci.y[:, i],
-                yerr=lci.yerr[:, i],
+                lci.bands[b].time,
+                lci.bands[b].flux,
+                yerr=lci.bands[b].flux_err,
                 linestyle='None',
                 marker='.'
             )
     plt.xlabel('time')
-    plt.ylabel('brightness')
+    plt.ylabel('flux')
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return (fig)
@@ -84,14 +85,18 @@ def plot_lcs(lcs, save=None):
 def plot_arclen_res(lca, lcb, xform, save=None):
     fig = plt.figure()
     lcc = transform(lcb, xform)
-    lcd = merge(lca, lcc)
-    numbands = lca.x.shape[1]
-    for i in range(numbands):
+    lcd = lca + lcc
+    numbands = lca.nbands
+    for i, b in enumerate(lca.bands):
+        lcab = lca.bands[b]
+        lcbb = lcb.bands[b]
+        lccb = lcc.bands[b]
+        lcdb = lcd.bands[b]
         plt.subplot(numbands, 1, i + 1)
-        plt.errorbar(lca.x[:, i], lca.y[:, i], yerr=lca.yerr[:, i], label='reference')
-        plt.errorbar(lcb.x[:, i], lcb.y[:, i], yerr=lcb.yerr[:, i], label='proposal')
-        plt.errorbar(lcc.x[:, i], lcc.y[:, i], yerr=lcc.yerr[:, i], label='transformed')
-        plt.errorbar(lcd.x[:, i], lcd.y[:, i], yerr=lcd.yerr[:, i], label='merged')
+        plt.errorbar(lcab.time, lcab.flux, yerr=lcab.flux_err, label='reference')
+        plt.errorbar(lcbb.time, lcbb.flux, yerr=lcbb.flux_err, label='proposal')
+        plt.errorbar(lccb.time, lccb.flux, yerr=lccb.flux_err, label='transformed')
+        plt.errorbar(lcdb.time, lcdb.flux, yerr=lcdb.flux_err, label='merged')
     plt.legend()
     plt.xlabel('time')
     plt.ylabel('brightness')
