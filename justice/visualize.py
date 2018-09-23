@@ -119,6 +119,14 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
 
 
 def plot_gp_res(lctrain, lcpred, save=None):
+    """
+    Plots the results of a Gaussian Process fit
+
+    :param lctrain: The light curve trained on
+    :param lcpred: Predicted light curve
+    :param save: save figure or not
+    :return: figure
+    """
     fig = plt.figure()
     numbands = lctrain.nbands
     for i, b in enumerate(lctrain.bands):
