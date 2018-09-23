@@ -60,14 +60,16 @@ def opt_arclen(
 
 
 def fit_gp(lctrain, kernel=None):
-    gp = GPy.models.gp_regression.GPRegression(lctrain.to_arrays(), normalizer=True)
+    gpy_data = lctrain.to_arrays()
+    gp = GPy.models.gp_regression.GPRegression(gpy_data[0],gpy_data[1], normalizer=True)
     gp.optimize()
 
     return gp.log_likelihood()
 
 
 def pred_gp(lctrain, xpred, kernel=None):
-    gp = GPy.models.gp_regression.GPRegression(lctrain.toarrays(), normalizer=True)
+    gpy_data = lctrain.to_arrays()
+    gp = GPy.models.gp_regression.GPRegression(gpy_data[0],gpy_data[1], normalizer=True)
     gp.optimize()
     ypred, yvarpred = gp.predict(xpred)
     lcpred = LC(xpred, ypred, np.sqrt(yvarpred))
