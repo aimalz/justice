@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from justice import xform, lightcurve, simulate
+from justice import xform, simulate
 
 
 def test_defaulting():

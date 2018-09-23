@@ -7,14 +7,14 @@ from __future__ import print_function
 import argparse
 import glob
 import os.path
-import sys
 import pickle
+import sys
 
 import numpy as np
 import pandas as pd
 
-from justice import mmap_array
 from justice import lightcurve
+from justice import mmap_array
 
 sn_dir = os.path.join(mmap_array.default_array_dir, 'sn_phot_cc')
 index_filename = os.path.join(sn_dir, 'index_df.pickle')

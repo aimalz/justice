@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from justice import lightcurve, summarize, simulate
+from justice import summarize, simulate
 
 
 def test_overlap_cost_decreases_as_overlap_increases():

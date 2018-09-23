@@ -5,7 +5,7 @@ import math
 import numpy as np
 import scipy.stats as sps
 
-from justice.xform import Xform
+from justice import xform
 
 
 class BandData(object):
@@ -132,7 +132,7 @@ class _LC:
         bc = collections.OrderedDict()
         for b, val in zip(self._expected_bands, vals[4:]):
             bc[b] = val
-        return Xform(tx, ty, dx, dy, bc)
+        return xform.Xform(tx, ty, dx, dy, bc)
 
     def connect_the_dots(self):
         # ignores errorbars

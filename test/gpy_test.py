@@ -1,8 +1,6 @@
-import numpy as np
 import justice.simulate as sim
 import justice.summarize as summ
-
-import justice.xform as xform
+from justice import xform
 
 
 def test_gpy():

@@ -1,5 +1,6 @@
-import numpy as np
 from collections import namedtuple
+
+import numpy as np
 from tensorflow.contrib.framework import nest
 
 

@@ -5,8 +5,8 @@ import numpy as np
 import scipy.optimize as spo
 from tensorflow.contrib.framework import nest
 
-from justice.xform import Xform, transform
 from justice import lightcurve
+from justice import xform
 
 
 def lineup(lca, lcb):
@@ -43,8 +43,8 @@ def opt_arclen(
 
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
-        xform = lc.get_xform(vals=vals)
-        lc = transform(lcb, xform)
+        lca_xform = lca.get_xform(vals=vals)
+        lc = xform.transform(lcb, lca_xform)
         new_lc = lca + lc
         length = new_lc.connect_the_dots()
         return length
@@ -157,7 +157,7 @@ def opt_gp(
         ivals = generate_ivals(lca)
 
     if component_sensitivity == 'auto':
-        component_sensitivity = Xform(
+        component_sensitivity = xform.Xform(
             tx=np.std(lca.x) + np.std(lcb.x),
             ty=1.0,
             dx=1.0,
@@ -179,8 +179,8 @@ def opt_gp(
     def _helper(vals):
         if component_sensitivity is not None:
             vals = vals * component_sensitivity
-        xform = lca.get_xform(vals=vals)
-        lc = transform(lcb, xform)
+        lca_xform = lca.get_xform(vals=vals)
+        lc = xform.transform(lcb, lca_xform)
         new_lc = lca + lc
         fin_like = fit_gp(new_lc)
 
