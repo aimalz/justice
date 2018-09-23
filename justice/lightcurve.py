@@ -1,8 +1,12 @@
+import abc
+import collections
+import math
+
 import numpy as np
-from math import ceil
 import scipy.stats as sps
-from collections import OrderedDict
+
 from justice.xform import Xform
+
 
 class BandData(object):
     def __init__(self, time, flux, flux_err):
@@ -12,7 +16,7 @@ class BandData(object):
         self.flux_err = flux_err
 
     def __repr__(self):
-        return 'BandData(<size {size}>)'.format(size=len(self.time))
+        return 'BandData(time={self.time}, flux={self.flux}, flux_err={self.flux_err})'.format(self=self)
 
     def __add__(self, other):
         # this function is a likely culprit for future slowness, given how many times we'll be calling it.
@@ -33,27 +37,36 @@ class BandData(object):
         return BandData(cadence, observed_fluxes, error_bars)
 
     def connect_the_dots(self):
-        #ignores errorbars
+        # ignores errorbars
         time_difs = time[1:] - time[:-1]
         flux_difs = flux[1:] - flux[:-1]
-        return np.sum(np.sqrt(time_diffs**2 + flux_diffs**2))
+        return np.sum(np.sqrt(time_diffs ** 2 + flux_diffs ** 2))
 
 
 class _LC:
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, **bands):
-        d = OrderedDict()
+        d = collections.OrderedDict()
         for b in self._expected_bands:
             d[b] = bands[b]
         for k in bands:
             assert k in self._expected_bands
-        self.bands = bands
+        self.bands = d
 
     @property
     def nbands(self):
         return len(self.bands)
 
-    def _expected_bands(self):
-        return ''
+    @property
+    @abc.abstractmethod
+    def _expected_bands(self) -> list:
+        """Returns list of expected bands.
+
+        :return: List of expected bands
+        :rtype: list[str]
+        """
+        raise NotImplementedError()
 
     def __repr__(self):
         kwargs = ', '.join(['{}={}'.format(band, data) for band, data in self.bands.items()])
@@ -79,7 +92,7 @@ class _LC:
         for i, b in enumerate(self._expected_bands):
             band = self.bands[b]
             band_len = band.time.shape[0]
-            n_copies = ceil(max_size / band_len)
+            n_copies = math.ceil(max_size / band_len)
             out_time[:, i] = np.concatenate((band.time,) * n_copies)[:max_size]
             out_flux[:, i] = np.concatenate((band.flux,) * n_copies)[:max_size]
             if n_copies == 1:
@@ -104,9 +117,9 @@ class _LC:
         ty = vals[1]
         dx = vals[2]
         dy = vals[3]
-        bc = OrderedDict()
+        bc = collections.OrderedDict()
         for b, val in zip(self._expected_bands, vals[4:]):
-            bc[b]=val
+            bc[b] = val
         return Xform(tx, ty, dx, dy, bc)
 
     def connect_the_dots(self):
@@ -127,4 +140,3 @@ class OGLEDatasetLC(_LC):
     @property
     def _expected_bands(self):
         return 'IV'
-

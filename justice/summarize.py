@@ -6,6 +6,7 @@ import scipy.optimize as spo
 from tensorflow.contrib.framework import nest
 
 from justice.xform import Xform, transform
+from justice import lightcurve
 
 
 def lineup(lca, lcb):
@@ -97,15 +98,28 @@ class OverlapCostComponent(object):
         )
         self.cost_base = np.linspace(0, 1, len(cost_percentiles))
 
-    def cost(self, lca, lcb):
-        min_lca, max_lca = np.min(lca.x), np.max(lca.x)
-        min_lcb, max_lcb = np.min(lcb.x), np.max(lcb.x)
+    def cost(self, lca: lightcurve._LC, lcb: lightcurve._LC) -> float:
+        """
+
+        :param lca: First light curve.
+        :param lcb: Second light curve.
+        :return:
+        """
+
+        def _time_bounds(lc):
+            return (
+                min(np.min(band.time) for band in lc.bands.values()),
+                max(np.max(band.time) for band in lc.bands.values()),
+            )
+
+        min_lca, max_lca = _time_bounds(lca)
+        min_lcb, max_lcb = _time_bounds(lcb)
         overlap = min(max_lca, max_lcb) - max(min_lca, min_lcb)
         if overlap <= 0:
             return self.cost_outside
         else:
             overlap_percent = (2 * overlap) / (
-                (max_lca - min_lca) + (max_lcb - min_lcb)
+                    (max_lca - min_lca) + (max_lcb - min_lcb)
             )
             assert 0.0 <= overlap_percent <= 1.0
             return np.interp(x=overlap_percent, xp=self.cost_base, fp=self.cost_percentiles)

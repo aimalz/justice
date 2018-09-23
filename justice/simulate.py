@@ -45,11 +45,16 @@ def make_dataset(num_obj, xs, shape_fn, cls_wts=None):
 class TestLC(_LC):
     @property
     def _expected_bands(self):
-        return 'b'
+        return ['b']
 
     @classmethod
-    def make_super_easy(cls):
-        band = BandData(np.array([2, 3]), np.array([5, 6]), np.array([1, 1]))
+    def make_super_easy(cls, time=None):
+        time = time if time is not None else np.array([2, 3])
+        band = BandData(
+            time=time,
+            flux=np.array([5, 6]),
+            flux_err=np.array([1, 1])
+        )
         return TestLC(b=band)
 
     @classmethod

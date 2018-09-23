@@ -26,7 +26,7 @@ def test_to_and_from_array():
 
 def test_transform():
     tf = xform.Xform(tx=-3215, ty=0.2, dx=10.0, dy=2.0, bc={'b':1.})
-    lca = simulate.TestLC.make_super_easy()
+    lca = simulate.TestLC.make_super_easy(time=np.array([3215, 3217]))
     lc = tf.transform(lca)
     assert lc.bands['b'].time[0] == 0.0
     assert lc.bands['b'].time[1] == 20
