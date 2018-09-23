@@ -80,9 +80,9 @@ def plot_lcs(lcs, save=None):
     return (fig)
 
 
-def plot_arclen_res(lca, lcb, xform, save=None):
+def plot_arclen_res(lca, lcb, xforma, save=None):
     fig = plt.figure()
-    lcc = transform(lcb, xform)
+    lcc = xforma.transform(lcb)
     lcd = lca + lcc
     numbands = lca.nbands
     for i, b in enumerate(lca.bands):
