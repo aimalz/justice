@@ -9,6 +9,7 @@ import glob
 import os.path
 import pickle
 import sys
+import typing
 
 import numpy as np
 import pandas as pd
@@ -156,7 +157,7 @@ def format_dense_multi_band_from_lc_dict(lc_dict,
                            for time in bands[0][:, 0]],
                           dtype=np.float64)
 
-    band_data = {}
+    band_data: typing.Dict[str, lightcurve.BandData] = {}
     for i, band in enumerate(band_order):
         band_data[band] = lightcurve.BandData(
             time=dense_data[:, i, 0],

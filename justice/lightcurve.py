@@ -1,6 +1,7 @@
 import abc
 import collections
 import math
+import typing
 
 import numpy as np
 import scipy.stats as sps
@@ -9,17 +10,31 @@ from justice import xform
 
 
 class BandData(object):
-    def __init__(self, time, flux, flux_err):
+    """Light curve data for a single band.
+    """
+
+    def __init__(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray) -> None:
+        """Initializes BandData.
+
+        :param time: Time values, 1-D np float array.
+        :param flux: Flux values, 1-D np float array.
+        :param flux_err: Flux error values, 1-D np float array.
+        """
         assert time.shape == flux.shape == flux_err.shape
         self.time = time
         self.flux = flux
         self.flux_err = flux_err
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Formats light curve to a string for debugging."""
         return 'BandData(time={self.time}, flux={self.flux}, flux_err={self.flux_err})'.format(
             self=self)
 
-    def __add__(self, other):
+    def __add__(self, other: 'BandData') -> 'BandData':
+        """Concatenates this light curve with another, and sorts by time.
+
+        :param other: Other light curve band data.
+        """
         # this function is a likely culprit for future slowness, given how many
         # times we'll be calling it.
         times = np.concatenate((self.time, other.time))
@@ -38,18 +53,35 @@ class BandData(object):
         observed_fluxes = true_fluxes + errors
         return BandData(cadence, observed_fluxes, error_bars)
 
-    def connect_the_dots(self):
+    def connect_the_dots(self) -> float:
+        """Returns the arc length of the light curve.
+
+        Sensitive to the magnitude of flux.
+
+        :return: Arc length measurement.
+        """
         # ignores errorbars
-        time_difs = time[1:] - time[:-1]
-        flux_difs = flux[1:] - flux[:-1]
-        return np.sum(np.sqrt(time_diffs**2 + flux_diffs**2))
+        time_diffs = self.time[1:] - self.time[:-1]
+        flux_diffs = self.flux[1:] - self.flux[:-1]
+        return float(np.sum(np.sqrt(time_diffs**2 + flux_diffs**2)))
 
 
 class _LC:
+    """Abstract base light curve class. Subclasses should provide a list of bands.
+    """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, **bands):
-        d = collections.OrderedDict()
+    def __init__(self, **bands: BandData) -> None:
+        """Initializes a light curve.
+
+        :param bands: Dictionary of bands.
+        """
+        if frozenset(bands.keys()) != frozenset(self._expected_bands):
+            raise ValueError("Expected bands {} but got {}".format(
+                self._expected_bands, bands.keys()
+            ))
+
+        d: collections.OrderedDict[str, BandData] = collections.OrderedDict()
         for b in self._expected_bands:
             d[b] = bands[b]
         for k in bands:
@@ -57,12 +89,13 @@ class _LC:
         self.bands = d
 
     @property
-    def nbands(self):
+    def nbands(self) -> int:
+        """Returns the number of bands."""
         return len(self.bands)
 
     @property
     @abc.abstractmethod
-    def _expected_bands(self) -> list:
+    def _expected_bands(self) -> typing.List[str]:
         """Returns list of expected bands.
 
         :return: List of expected bands
@@ -70,7 +103,7 @@ class _LC:
         """
         raise NotImplementedError()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         kwargs = ', '.join([
             '{}={}'.format(band, data) for band, data in self.bands.items()
         ])
@@ -78,17 +111,21 @@ class _LC:
             dataset=self.__class__.__name__, kwargs=kwargs
         )
 
-    def __add__(self, other):
+    def __add__(self, other: '_LC') -> '_LC':
+        """Concatenates all bands of two light curves together.
+
+        :param other: Other light curve.
+        :return: New merged light curve.
+        """
         assert self._expected_bands == other._expected_bands
-        bands = dict((band, self.bands[band] + other.bands[band]) for band in self.bands)
+        bands = {band: self.bands[band] + other.bands[band] for band in self.bands}
         return self.__class__(**bands)
 
-    def to_arrays(self):
-        """
-        Formats this LC to a tuple of arrays, suitable for GPy
-        Pads with repeats with the flux_errs much bigger
+    def to_arrays(self) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Formats this LC to a tuple of arrays, suitable for GPy.
 
-        :param band_order: Order of expected bands.
+        Pads with repeats with the flux_errs much bigger.
+
         :return: np.array, np.array, np.array
         """
         max_size = max(bd.time.shape[0] for bd in self.bands.values())
@@ -116,25 +153,25 @@ class _LC:
             out_flux_err[ordinals], axis=2
         )
 
-    def get_xform(self, vals=None):
+    def get_xform(self, vals: np.ndarray = None) -> xform.Xform:
         if vals is None:
-            vals = []
-            vals.append(0.)
-            vals.append(0.)
-            vals.append(1.)
-            vals.append(1.)
-            for b in self._expected_bands:
+            vals = [0., 0., 1., 1.]
+            for _ in self._expected_bands:
                 vals.append(1.)
         tx = vals[0]
         ty = vals[1]
         dx = vals[2]
         dy = vals[3]
-        bc = collections.OrderedDict()
+        bc: collections.OrderedDict[str, float] = collections.OrderedDict()
         for b, val in zip(self._expected_bands, vals[4:]):
             bc[b] = val
         return xform.Xform(tx, ty, dx, dy, bc)
 
-    def connect_the_dots(self):
+    def connect_the_dots(self) -> float:
+        """Returns the sum of the arc length of all bands.
+
+        :return: Arclength, summed over bands.
+        """
         # ignores errorbars
         arclen = 0.
         for b in self._expected_bands:
@@ -143,12 +180,14 @@ class _LC:
 
 
 class SNDatasetLC(_LC):
+    """Supernova dataset light curve."""
     @property
     def _expected_bands(self):
         return ['g', 'r', 'i', 'z']
 
 
 class OGLEDatasetLC(_LC):
+    """OGLE dataset light curve."""
     @property
     def _expected_bands(self):
-        return 'IV'
+        return ['I', 'V']
