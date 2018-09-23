@@ -102,7 +102,7 @@ class _LC:
                 out_flux_err[:, i] = np.concatenate(chunks)[:max_size]
         ordinals = np.argsort(out_time)
 
-        return out_time[ordinals], out_flux[ordinals], out_flux_err[ordinals]
+        return np.squeeze(out_time[ordinals],axis=2), np.squeeze(out_flux[ordinals],axis=2), np.squeeze(out_flux_err[ordinals],axis=2)
 
     def get_xform(self, vals=None):
         if vals is None:
