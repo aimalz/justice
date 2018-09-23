@@ -6,9 +6,11 @@ import justice.simulate as sim
 import justice.summarize as summ
 from justice import xform
 
+
 def test_connect_the_dots():
     glc1 = sim.TestLC.make_easy_gauss()
-    print(glc1.connect_the_dots())
+    assert (np.abs(glc1.connect_the_dots() - 22.708486542177816) < 1e-4)
+
 
 def test_arclen():
     glc = sim.TestLC.make_hard_gauss()
@@ -18,4 +20,3 @@ def test_arclen():
 
     aff2 = summ.opt_arclen(glc, glc2, vb=False, options={'maxiter': 10})
     del aff2  # unused
-

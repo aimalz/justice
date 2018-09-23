@@ -77,9 +77,9 @@ class _LC:
         :param bands: Dictionary of bands.
         """
         if frozenset(bands.keys()) != frozenset(self._expected_bands):
-            raise ValueError("Expected bands {} but got {}".format(
-                self._expected_bands, bands.keys()
-            ))
+            raise ValueError(
+                "Expected bands {} but got {}".format(self._expected_bands, bands.keys())
+            )
 
         d: collections.OrderedDict[str, BandData] = collections.OrderedDict()
         for b in self._expected_bands:
@@ -181,6 +181,7 @@ class _LC:
 
 class SNDatasetLC(_LC):
     """Supernova dataset light curve."""
+
     @property
     def _expected_bands(self):
         return ['g', 'r', 'i', 'z']
@@ -188,6 +189,7 @@ class SNDatasetLC(_LC):
 
 class OGLEDatasetLC(_LC):
     """OGLE dataset light curve."""
+
     @property
     def _expected_bands(self):
         return ['I', 'V']
