@@ -57,6 +57,12 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
 
 
 def plot_lcs(lcs, save=None):
+    """Plot multiple (or single) lightcurves at once
+
+    :param lcs: list of lightcurves
+    :param save: boolean to save or not
+    :return: figure object
+    """
     # This needs a way to have names of the bands, but it works for now.
     if not isinstance(lcs, list):
         lcs = [lcs]
@@ -81,6 +87,15 @@ def plot_lcs(lcs, save=None):
 
 
 def plot_arclen_res(lca, lcb, xforma, save=None):
+    """
+    Plot the result of a trial merger for arclen
+
+    :param lca: Original lightcurve
+    :param lcb: Lightcurve to merge
+    :param xforma: Transform to show
+    :param save: save fig or not
+    :return: figure
+    """
     fig = plt.figure()
     lcc = xforma.transform(lcb)
     lcd = lca + lcc
