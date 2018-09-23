@@ -4,8 +4,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import random
 import os.path
+import random
 
 from justice import mmap_array
 

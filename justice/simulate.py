@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.stats as sps
-from justice.lightcurve import BandData, _LC
+
+from justice import lightcurve
 
 
 def make_cadence(xs, xerrs):
@@ -41,7 +42,7 @@ def make_dataset(num_obj, xs, shape_fn, cls_wts=None):
             0.5,
         ] * len(xs)))
         bands.append(
-            BandData.from_cadence_shape_and_errfracs(
+            lightcurve.BandData.from_cadence_shape_and_errfracs(
                 cadence, cls, np.array([0.1] * len(xs))
             )
         )
@@ -49,7 +50,7 @@ def make_dataset(num_obj, xs, shape_fn, cls_wts=None):
     return bands
 
 
-class TestLC(_LC):
+class TestLC(lightcurve._LC):
     @property
     def _expected_bands(self):
         return ['b']
@@ -57,7 +58,9 @@ class TestLC(_LC):
     @classmethod
     def make_super_easy(cls, time=None):
         time = time if time is not None else np.array([2, 3])
-        band = BandData(time=time, flux=np.array([5, 6]), flux_err=np.array([1, 1]))
+        band = lightcurve.BandData(
+            time=time, flux=np.array([5, 6]), flux_err=np.array([1, 1])
+        )
         return TestLC(b=band)
 
     @classmethod
@@ -65,7 +68,9 @@ class TestLC(_LC):
         gauss_fcn = make_gauss_shape_fn(1.0, 0, 1, 0)
         xs = make_cadence(np.arange(0, 22.6, .1), [0.] * 226)
 
-        band = BandData.from_cadence_shape_and_errfracs(xs, gauss_fcn, [0] * 226)
+        band = lightcurve.BandData.from_cadence_shape_and_errfracs(
+            xs, gauss_fcn, [0] * 226
+        )
         return TestLC(b=band)
 
     @classmethod
@@ -73,5 +78,7 @@ class TestLC(_LC):
         gauss_fcn = make_gauss_shape_fn(1.5, 1, 1.2, .3)
         xs = make_cadence(np.arange(0, 11.5, .1), [0.025] * 115)
 
-        band = BandData.from_cadence_shape_and_errfracs(xs, gauss_fcn, [0.2] * 115)
+        band = lightcurve.BandData.from_cadence_shape_and_errfracs(
+            xs, gauss_fcn, [0.2] * 115
+        )
         return TestLC(b=band)

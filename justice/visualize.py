@@ -2,9 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from justice.xform import transform
-
-#from justice.lightcurve import merge
+from justice import xform
 
 # would like to have these pass axes between each other to combine what's being plotted
 # also want to accommodate multiple filters/bands of y
@@ -74,12 +72,12 @@ def plot_lcs(lcs, save=None):
     plt.ylabel('brightness')
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
-    return (fig)
+    return fig
 
 
-def plot_arclen_res(lca, lcb, xform, save=None):
+def plot_arclen_res(lca, lcb, lcb_xform, save=None):
     fig = plt.figure()
-    lcc = transform(lcb, xform)
+    lcc = xform.transform(lcb, lcb_xform)
     lcd = merge(lca, lcc)
     numbands = lca.x.shape[1]
     for i in range(numbands):
@@ -93,7 +91,7 @@ def plot_arclen_res(lca, lcb, xform, save=None):
     plt.ylabel('brightness')
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
-    return (fig)
+    return fig
 
 
 def plot_gp_res(lctrain, lcpred, save=None):
@@ -119,4 +117,4 @@ def plot_gp_res(lctrain, lcpred, save=None):
     plt.ylabel('brightness')
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
-    return (fig)
+    return fig
