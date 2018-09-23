@@ -1,6 +1,6 @@
 # justice
 
-![Build Status](https://travis-ci.org/gatoatigrado/justice.svg?branch=master)
+![Build Status](https://travis-ci.org/aimalz/justice.svg?branch=master)
 
 A semi-unsupervised classifier for noisy, irregular, sparse transient and variable astronomical lightcurves.
 
