@@ -11,6 +11,7 @@ def make_cadence(xs, xerrs):
     jitters = (np.random.uniform(np.shape(xs)) - 0.5) * xerrs
     return xs + jitters
 
+
 # A shape function takes a cadence and output fluxes
 
 
@@ -21,11 +22,11 @@ def make_gauss_shape_fn(scale, center, amplitude, const):
 
     def gauss(cadence):
         return dist.pdf(cadence) * ampfact + const
+
     return gauss
 
 
 def make_sine_shape_fn(period, phase, amplitude, const):
-
     def sine(cadence):
         return amplitude * np.sin(period * cadence + phase) + const
 
@@ -36,8 +37,14 @@ def make_dataset(num_obj, xs, shape_fn, cls_wts=None):
     bands = []
     true_cls = np.random.choice(shape_fn, num_obj, p=cls_wts)
     for cls in true_cls:
-        cadence = make_cadence(xs, np.array([0.5, ] * len(xs)))
-        bands.append(BandData.from_cadence_shape_and_errfracs(cadence, cls, np.array([0.1] * len(xs))))
+        cadence = make_cadence(xs, np.array([
+            0.5,
+        ] * len(xs)))
+        bands.append(
+            BandData.from_cadence_shape_and_errfracs(
+                cadence, cls, np.array([0.1] * len(xs))
+            )
+        )
 
     return bands
 
@@ -50,11 +57,7 @@ class TestLC(_LC):
     @classmethod
     def make_super_easy(cls, time=None):
         time = time if time is not None else np.array([2, 3])
-        band = BandData(
-            time=time,
-            flux=np.array([5, 6]),
-            flux_err=np.array([1, 1])
-        )
+        band = BandData(time=time, flux=np.array([5, 6]), flux_err=np.array([1, 1]))
         return TestLC(b=band)
 
     @classmethod

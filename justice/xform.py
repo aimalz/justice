@@ -11,13 +11,13 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
     __slots__ = ()
 
     def __new__(cls, *args, **kwargs):
-        if kwargs or not args: #Using kwargs is discouraged as of right now
+        if kwargs or not args:  # Using kwargs is discouraged as of right now
             assert not args
             kwargs.setdefault("tx", 0.0)
             kwargs.setdefault("ty", 0.0)
             kwargs.setdefault("dx", 1.0)
             kwargs.setdefault("dy", 1.0)
-            kwargs.setdefault("bc", {'b': 0.0}) 
+            kwargs.setdefault("bc", {'b': 0.0})
             return super(cls, Xform).__new__(cls, **kwargs)
         else:
             return super(cls, Xform).__new__(cls, *args)

@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 
 from justice.xform import transform
+
 #from justice.lightcurve import merge
 
 # would like to have these pass axes between each other to combine what's being plotted
@@ -36,10 +37,11 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=_default_color
     fig = plt.figure(figsize=figsize)
     plt.title(title)
 
-    if len(colors) != len(lc.bands)
+    if len(colors) != len(lc.bands):
         raise ValueError(
             "Have {} colors but {} bands".format(
-                len(colors), len(lc.bands))
+                len(colors), len(
+                    lc.bands)))
 
     for band, color in zip(lc.bands, colors):
         plt.errorbar(

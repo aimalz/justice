@@ -14,9 +14,11 @@ def lineup(lca, lcb):
     # do this on coarse grid, then refine
     pass
 
+
 def generate_ivals(lc):
     numbands = lc.nbands
     return np.array(nest.flatten(lc.get_xform()))
+
 
 def opt_arclen(
     lca,
@@ -29,7 +31,7 @@ def opt_arclen(
 ):
     if ivals is None:
         ivals = generate_ivals(lca)
-    
+
     if method != 'Nelder-Mead':
 
         def pos_dil(xform):
@@ -47,7 +49,6 @@ def opt_arclen(
         length = new_lc.connect_the_dots()
         return length
 
-    
     # could make this a probability by taking chi^2 error relative to
     # connect_the_dots original, but it didn't work better in the sandbox
     # notebook
@@ -62,7 +63,7 @@ def opt_arclen(
 
 def fit_gp(lctrain, kernel=None):
     gpy_data = lctrain.to_arrays()
-    gp = GPy.models.gp_regression.GPRegression(gpy_data[0],gpy_data[1], normalizer=True)
+    gp = GPy.models.gp_regression.GPRegression(gpy_data[0], gpy_data[1], normalizer=True)
     gp.optimize()
 
     return gp.log_likelihood()
@@ -70,7 +71,7 @@ def fit_gp(lctrain, kernel=None):
 
 def pred_gp(lctrain, xpred, kernel=None):
     gpy_data = lctrain.to_arrays()
-    gp = GPy.models.gp_regression.GPRegression(gpy_data[0],gpy_data[1], normalizer=True)
+    gp = GPy.models.gp_regression.GPRegression(gpy_data[0], gpy_data[1], normalizer=True)
     gp.optimize()
     ypred, yvarpred = gp.predict(xpred)
     lcpred = LC(xpred, ypred, np.sqrt(yvarpred))
@@ -120,11 +121,11 @@ class OverlapCostComponent(object):
         if overlap <= 0:
             return self.cost_outside
         else:
-            overlap_percent = (2 * overlap) / (
-                    (max_lca - min_lca) + (max_lcb - min_lcb)
-            )
+            overlap_percent = (2 * overlap) / ((max_lca - min_lca) + (max_lcb - min_lcb))
             assert 0.0 <= overlap_percent <= 1.0
-            return np.interp(x=overlap_percent, xp=self.cost_base, fp=self.cost_percentiles)
+            return np.interp(
+                x=overlap_percent, xp=self.cost_base, fp=self.cost_percentiles
+            )
 
 
 def opt_gp(
@@ -154,7 +155,7 @@ def opt_gp(
     """
     if ivals is None:
         ivals = generate_ivals(lca)
-        
+
     if component_sensitivity == 'auto':
         component_sensitivity = Xform(
             tx=np.std(lca.x) + np.std(lcb.x),

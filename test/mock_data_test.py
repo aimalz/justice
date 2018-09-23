@@ -7,16 +7,10 @@ def test_make_gauss():
     gauss_fcn = sim.make_gauss_shape_fn(1.0, 0, 1, 0)
     xs = sim.make_cadence(np.arange(0.0, 1.0, 0.1), [0.] * 10)
     ys = gauss_fcn(xs)
-    expected = np.array([1.,
-                         0.99501248,
-                         0.98019867,
-                         0.95599748,
-                         0.92311635,
-                         0.8824969,
-                         0.83527021,
-                         0.78270454,
-                         0.72614904,
-                         0.66697681])
+    expected = np.array([
+        1., 0.99501248, 0.98019867, 0.95599748, 0.92311635, 0.8824969, 0.83527021,
+        0.78270454, 0.72614904, 0.66697681
+    ])
     assert np.sum(np.abs(expected - ys)) < 1e-6
 
 
