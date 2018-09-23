@@ -52,7 +52,7 @@ def make_dataset(num_obj, xs, shape_fn, cls_wts=None):
 
 class TestLC(lightcurve._LC):
     @property
-    def _expected_bands(self):
+    def expected_bands(self):
         return ['b']
 
     @classmethod

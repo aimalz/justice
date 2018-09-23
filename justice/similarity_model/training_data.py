@@ -11,14 +11,15 @@ import tensorflow as tf
 
 from justice import sample_data
 
-
 if tuple(map(int, tf.__version__.split('.')))[0:2] < (1, 9):
-    raise ImportError("TensorFlow 1.9 or above is required, found {}".format(tf.__version__))
+    raise ImportError(
+        "TensorFlow 1.9 or above is required, found {}".format(tf.__version__)
+    )
 
 
 def _prefix_fcn(diffs_within_median):
     num_elts, = diffs_within_median.shape
-    result = np.zeros((num_elts + 1,), dtype=np.int32)
+    result = np.zeros((num_elts + 1, ), dtype=np.int32)
     accumulator = 0
     for i, value in enumerate(diffs_within_median):
         if value:
@@ -39,8 +40,8 @@ def get_window_valid_indices(diffs, lower, upper, window_size):
     #
     # Basically elements of |prefix_within_median| that are greater than the threshold are at the right end
     # of the window, so we have to shift them over.
-    return np.arange(1 - window_size, prefix_within_median.shape[0] + 1 - window_size)[
-        prefix_within_median >= window_size - 1]
+    return np.arange(1 - window_size, prefix_within_median.shape[0] + 1 -
+                     window_size)[prefix_within_median >= window_size - 1]
 
 
 def sample_data_input_fn(params):
@@ -83,15 +84,11 @@ def sample_data_input_fn(params):
     assert num_columns == 3
 
     # For each data item, this computes
-    time_diffs = [
-        (x[1:, 0] - x[:-1, 0])
-        for x in all_downsampled
-    ]
+    time_diffs = [(x[1:, 0] - x[:-1, 0]) for x in all_downsampled]
     median_time_diff = np.median(np.concatenate(time_diffs, axis=0))
     lower, upper = median_time_diff * 0.8, median_time_diff * 1.2
     valid_start_window_indices = [
-        get_window_valid_indices(d, lower, upper, window_size)
-        for d in time_diffs
+        get_window_valid_indices(d, lower, upper, window_size) for d in time_diffs
     ]
     for name, valid_indices in zip(dataset_names, valid_start_window_indices):
         if np.size(valid_indices) == 0:
@@ -99,11 +96,12 @@ def sample_data_input_fn(params):
 
     def get_samples_py_op(idx_array):
         assert isinstance(idx_array, np.ndarray)
-        assert idx_array.shape == (batch_size,)
+        assert idx_array.shape == (batch_size, )
         results = np.zeros((batch_size, window_size, num_columns), dtype=np_dtype)
         for i, sample_idx in enumerate(idx_array):
             start_idx = random.choice(valid_start_window_indices[sample_idx])
-            results[i, :, :] = all_downsampled[sample_idx][start_idx:(start_idx + window_size)]
+            results[i, :, :] = all_downsampled[sample_idx][start_idx:
+                                                           (start_idx + window_size)]
         assert results.shape == (batch_size, window_size, num_columns)
         return results
 
@@ -121,7 +119,10 @@ def sample_data_input_fn(params):
         return neg_idx_array
 
     def get_negative_window_sample(idx_tensor):
-        neg_idx_tensor = tf.py_func(random_negative_py_op, [idx_tensor], idx_tensor.dtype)
+        neg_idx_tensor = tf.py_func(
+            random_negative_py_op,
+            [idx_tensor],
+            idx_tensor.dtype)
         return get_window_sample(neg_idx_tensor)
 
     # Current sample method: First select sample index, then select window.
@@ -158,6 +159,6 @@ if __name__ == '__main__':
     })
     with tf.Session() as sess:
         tensors = dataset.make_one_shot_iterator().get_next()
-        for _ in xrange(10):
+        for _ in range(10):
             results = sess.run(tensors)
             print(results['goal'])

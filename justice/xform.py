@@ -1,7 +1,11 @@
+import typing
 from collections import namedtuple
 
 import numpy as np
 from tensorflow.contrib.framework import nest
+
+if typing.TYPE_CHECKING:
+    from justice import lightcurve
 
 
 class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
@@ -38,9 +42,23 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
         return lc.__class__(**bands)
 
 
-def make_xform(list):
-    xform = Xform(list[0], list[1], list[2], list[3], list[4])
-    return xform
+class PerBandTransforms(dict):
+    def transform(self, lc: 'lightcurve._LC'):
+        if frozenset(self.keys()) != frozenset(lc.expected_bands):
+            raise ValueError(
+                "Expected bands {} but got {}".format(self.keys(), lc.expected_bands)
+            )
+
+        return lc.__class__(
+            **{
+                b: self[b].transform_band(band_data, 1.0)
+                for b, band_data in lc.bands.items()
+            }
+        )
+
+
+def make_xform(lst):
+    return Xform(lst[0], lst[1], lst[2], lst[3], lst[4])
 
 
 def transform(lc, xform):
