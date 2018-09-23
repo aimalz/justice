@@ -145,7 +145,7 @@ class _LC:
 class SNDatasetLC(_LC):
     @property
     def _expected_bands(self):
-        return 'griz'
+        return ['g', 'r', 'i', 'z']
 
 
 class OGLEDatasetLC(_LC):
