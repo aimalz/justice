@@ -7,7 +7,7 @@ from __future__ import print_function
 import os.path
 import random
 
-from justice import mmap_array
+from justice import mmap_array, lightcurve
 
 ogle_dir = os.path.join(mmap_array.default_array_dir, 'ogle_iii')
 
@@ -41,18 +41,21 @@ class OgleDataset(mmap_array.IndexedArray):
             row_and_data.append((row, data))
         return row_and_data
 
-    def lc_dict_for_id(self, id_):
-        """Returns a dictionary mapping band to light curve array.
+    def lc_for_id(self, id_):
+        """Returns a light curve for an ID.
 
         :param id_: ID to get data for.
         :return: Dict from band ('i', 'r', etc.) to [num_points, 3]-shaped array.
             The first column is time, second is flux, third is flux error.
         """
         row_and_data = self.lcs_for_id(id_)
-        result = {row.band: array for row, array in row_and_data}
+        result = {
+            row.band: lightcurve.BandData.from_dense_array(array)
+            for row, array in row_and_data
+        }
         if len(row_and_data) != len(result):
             raise ValueError("band does not uniquely identify sub-ranges")
-        return result
+        return lightcurve.OGLEDatasetLC(**result)
 
     @classmethod
     def read_for_name(cls, name):

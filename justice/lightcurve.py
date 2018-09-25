@@ -13,6 +13,8 @@ class BandData(object):
     """Light curve data for a single band.
     """
 
+    __slots__ = ('time', 'flux', 'flux_err')
+
     def __init__(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray) -> None:
         """Initializes BandData.
 
@@ -65,6 +67,13 @@ class BandData(object):
         flux_diffs = self.flux[1:] - self.flux[:-1]
         return float(np.sum(np.sqrt(time_diffs**2 + flux_diffs**2)))
 
+    @classmethod
+    def from_dense_array(cls, array: np.ndarray) -> 'BandData':
+        num_points, channels = array.shape
+        if channels != 3:
+            raise ValueError("BandData.from_dense_array requires an n x 3 array.")
+        return cls(time=array[:, 0], flux=array[:, 1], flux_err=array[:, 2])
+
 
 class _LC:
     """Abstract base light curve class. Subclasses should provide a list of bands.
@@ -76,16 +85,16 @@ class _LC:
 
         :param bands: Dictionary of bands.
         """
-        if frozenset(bands.keys()) != frozenset(self._expected_bands):
+        if frozenset(bands.keys()) != frozenset(self.expected_bands):
             raise ValueError(
-                "Expected bands {} but got {}".format(self._expected_bands, bands.keys())
+                "Expected bands {} but got {}".format(self.expected_bands, bands.keys())
             )
 
         d: collections.OrderedDict[str, BandData] = collections.OrderedDict()
-        for b in self._expected_bands:
+        for b in self.expected_bands:
             d[b] = bands[b]
         for k in bands:
-            assert k in self._expected_bands
+            assert k in self.expected_bands
         self.bands = d
 
     @property
@@ -95,7 +104,7 @@ class _LC:
 
     @property
     @abc.abstractmethod
-    def _expected_bands(self) -> typing.List[str]:
+    def expected_bands(self) -> typing.List[str]:
         """Returns list of expected bands.
 
         :return: List of expected bands
@@ -117,9 +126,15 @@ class _LC:
         :param other: Other light curve.
         :return: New merged light curve.
         """
-        assert self._expected_bands == other._expected_bands
+        assert self.expected_bands == other.expected_bands
         bands = {band: self.bands[band] + other.bands[band] for band in self.bands}
         return self.__class__(**bands)
+
+    def __getitem__(self, key: str) -> BandData:
+        return self.bands[key]
+
+    def all_times(self) -> typing.List[np.ndarray]:
+        return [bd.time for bd in self.bands.values()]
 
     def to_arrays(self) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Formats this LC to a tuple of arrays, suitable for GPy.
@@ -132,7 +147,7 @@ class _LC:
         out_time = np.zeros((max_size, len(self.bands)))
         out_flux = np.zeros((max_size, len(self.bands)))
         out_flux_err = np.zeros((max_size, len(self.bands)))
-        for i, b in enumerate(self._expected_bands):
+        for i, b in enumerate(self.expected_bands):
             band = self.bands[b]
             band_len = band.time.shape[0]
             n_copies = math.ceil(max_size / band_len)
@@ -156,14 +171,14 @@ class _LC:
     def get_xform(self, vals: np.ndarray = None) -> xform.Xform:
         if vals is None:
             vals = [0., 0., 1., 1.]
-            for _ in self._expected_bands:
+            for _ in self.expected_bands:
                 vals.append(1.)
         tx = vals[0]
         ty = vals[1]
         dx = vals[2]
         dy = vals[3]
         bc: collections.OrderedDict[str, float] = collections.OrderedDict()
-        for b, val in zip(self._expected_bands, vals[4:]):
+        for b, val in zip(self.expected_bands, vals[4:]):
             bc[b] = val
         return xform.Xform(tx, ty, dx, dy, bc)
 
@@ -174,16 +189,40 @@ class _LC:
         """
         # ignores errorbars
         arclen = 0.
-        for b in self._expected_bands:
+        for b in self.expected_bands:
             arclen += self.bands[b].connect_the_dots()
         return arclen
+
+    def per_band_normalization(
+            self,
+            output_flux_scale: float) -> xform.PerBandTransforms:
+        """Centering transformation for all bands.
+
+        This method scales points, and is probably not physically realistic
+
+        :param output_flux_scale: Magnitude of largest output flux value. For things like arclen alignment, consider setting this to something comparable to the time scale.
+        :return: Transform object.
+        """
+        # noinspection PyTypeChecker
+        time_bounds = np.percentile([np.concatenate(self.all_times(), axis=0)],
+                                    q=[5.0, 95.0])
+
+        def _per_band_transform(band_data: BandData):
+            return xform.Xform(  # type: ignore
+                tx=-np.mean(time_bounds), dy=output_flux_scale / np.max(band_data.flux)
+            )
+
+        return xform.PerBandTransforms({
+            b: _per_band_transform(bd)
+            for b, bd in self.bands.items()
+        })
 
 
 class SNDatasetLC(_LC):
     """Supernova dataset light curve."""
 
     @property
-    def _expected_bands(self):
+    def expected_bands(self):
         return ['g', 'r', 'i', 'z']
 
 
@@ -191,5 +230,5 @@ class OGLEDatasetLC(_LC):
     """OGLE dataset light curve."""
 
     @property
-    def _expected_bands(self):
+    def expected_bands(self):
         return ['I', 'V']
