@@ -24,7 +24,7 @@ def _dat_files(directory):
 
 def parse_lc_line(line):
     hjd, mag, mag_err = map(float, line.strip().split())
-    flux = 10.0**(-0.4 * mag)
+    flux = 10.0**23.0 * 10.0**(-0.4 * (mag + 48.6))
     flux_err = (mag_err / mag) * flux
     return hjd, flux, flux_err
 
