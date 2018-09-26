@@ -29,7 +29,7 @@ def test_build_and_get_random(testdata_dir, tmpdir):
     assert test_dataset['OGLE-LMC-CEP-0002'].field.tolist() == ['LMC157.6', 'LMC157.6']
     assert lc.bands.keys() == {"I", "V"}
     assert lc["I"].time[0:2].tolist() == [479.65878256202586, 1273.9239423496151]
-    assert lc["I"].flux[0:2].tolist() == [8.154761695700554e-08, 9.080244446205889e-08]
+    assert lc["I"].flux[0:2].tolist() == [0.00029608150135886817, 0.00032968374903654405]
     assert lc["I"].flux_err[0:2].tolist() == [
-        6.624523579080573e-11, 8.940833243072116e-11
+        2.405219134871237e-07, 3.246220341918471e-07
     ]
