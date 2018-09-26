@@ -9,7 +9,7 @@ from justice import xform
 
 def test_connect_the_dots():
     glc1 = sim.TestLC.make_easy_gauss()
-    assert (np.abs(glc1.connect_the_dots() - 22.708486542177816) < 1e-4)
+    assert (np.abs(glc1.connect_the_dots() - 225.14157021861462) < 1e-4)
 
 
 def test_arclen():
