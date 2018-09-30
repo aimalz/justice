@@ -66,7 +66,7 @@ def plot_lcs(lcs, save=None):
     # This needs a way to have names of the bands, but it works for now.
     if not isinstance(lcs, list):
         lcs = [lcs]
-    fig = plt.figure()
+    fig = plt.figure(figsize=(15,18))
     numbands = lcs[0].nbands
     bands = lcs[0].bands
     for i, b in enumerate(bands):
@@ -79,8 +79,11 @@ def plot_lcs(lcs, save=None):
                 linestyle='None',
                 marker='.'
             )
+        plt.ylabel(b).set_rotation(0)
     plt.xlabel('time')
-    plt.ylabel('flux')
+    plt.subplots_adjust(hspace=0.4)
+    plt.tight_layout()
+
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return (fig)
