@@ -14,9 +14,9 @@ class BandData(object):
     """Light curve data for a single band.
     """
 
-    __slots__ = ('time', 'flux', 'flux_err')
+    __slots__ = ('time', 'flux', 'flux_err', 'detected')
 
-    def __init__(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray) -> None:
+    def __init__(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray, detected: np.ndarray = None) -> None:
         """Initializes BandData.
 
         :param time: Time values, 1-D np float array.
@@ -27,6 +27,10 @@ class BandData(object):
         self.time = time
         self.flux = flux
         self.flux_err = flux_err
+        if detected is None:
+            self.detected = np.ones_like(self.time)
+        else:
+            self.detected = detected
 
     def __repr__(self) -> str:
         """Formats light curve to a string for debugging."""
@@ -238,13 +242,13 @@ class PlasticcDatasetLC(_LC):
     @classmethod
     def get_band(cls, conn, dataset, obj_id, band_id):
 
-        q = '''select mjd, flux, flux_err
+        q = '''select mjd, flux, flux_err, detected
                 from {}
                 where object_id = ? and passband = ?
                 order by mjd'''.format(dataset)
         cursor = conn.execute(q, [obj_id, band_id])
-        times, fluxes, flux_errs = [np.array(series) for series in zip(*cursor.fetchall())]
-        return BandData(times, fluxes, flux_errs)
+        times, fluxes, flux_errs, detected = [np.array(series) for series in zip(*cursor.fetchall())]
+        return BandData(times, fluxes, flux_errs, detected)
 
     @classmethod
     def get_lc(cls, conn, dataset, obj_id):
