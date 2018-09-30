@@ -1,4 +1,4 @@
-create table training_set(object_id int, mjd double, passband int, flux_double, flux_err double, detected bool, PRIMARY KEY(object_id, passband, mjd));
+create table training_set(object_id int, mjd double, passband int, flux double, flux_err double, detected bool, PRIMARY KEY(object_id, passband, mjd));
 .mode csv
 .import training_set.csv training_set
 
