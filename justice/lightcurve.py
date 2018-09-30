@@ -230,8 +230,8 @@ class OGLEDatasetLC(_LC):
 
 
 class PlasticcDatasetLC(_LC):
-    metadataKeys = {'object_id', 'ra', 'decl', 'gal_l', 'gal_b', 'ddf',
-                    'hostgal_specz', 'hostgal_photoz', 'hostgal_photoz_err', 'mwebv', 'target'}
+    metadataKeys = ['object_id', 'ra', 'decl', 'gal_l', 'gal_b', 'ddf',
+                    'hostgal_specz', 'hostgal_photoz', 'hostgal_photoz_err', 'distmod', 'mwebv', 'target']
 
     expected_bands = list('ugrizY')
 
@@ -249,7 +249,15 @@ class PlasticcDatasetLC(_LC):
     @classmethod
     def get_lc(cls, conn, dataset, obj_id):
         bands = dict((band, cls.get_band(conn, dataset, obj_id, band_id))
-                 for band_id, band in enumerate(cls.expected_bands))
-        return cls(**bands)
+                     for band_id, band in enumerate(cls.expected_bands))
+        lc = cls(**bands)
 
-# want to create index on object_id, passband, mjd
+        meta_row = conn.execute('select * from {}_meta where object_id = ?'.format(dataset), [obj_id]).fetchone()
+        lc.meta = dict(zip(cls.metadataKeys, meta_row))
+        return lc
+
+    @classmethod
+    def get_lc_by_target(cls, conn, dataset, target):
+        q = '''select object_id from {}_meta where target = ?'''.format(dataset)
+        obj_ids = conn.execute(q, [target]).fetchall()
+        return [cls.get_lc(conn, dataset, o) for (o,) in obj_ids]
