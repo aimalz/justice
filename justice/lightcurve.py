@@ -242,14 +242,14 @@ class PlasticcDatasetLC(_LC):
                 from {}
                 where object_id = ? and passband = ?
                 order by mjd'''.format(dataset)
-        cursor = conn.execute(q, obj_id, band_id)
-        times, fluxes, flux_errs = [numpy.array(series) for series in zip(*cursor.fetchall())]
+        cursor = conn.execute(q, [obj_id, band_id])
+        times, fluxes, flux_errs = [np.array(series) for series in zip(*cursor.fetchall())]
         return BandData(times, fluxes, flux_errs)
 
     @classmethod
     def get_lc(cls, conn, dataset, obj_id):
-        bands = [cls.get_band(conn, dataset, obj_id, band_id)
-                 for band_id, band in enumerate(cls.expected_bands)]
-        return cls(*bands)
+        bands = dict((band, cls.get_band(conn, dataset, obj_id, band_id))
+                 for band_id, band in enumerate(cls.expected_bands))
+        return cls(**bands)
 
 # want to create index on object_id, passband, mjd
