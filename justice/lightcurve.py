@@ -261,4 +261,4 @@ class PlasticcDatasetLC(_LC):
         # assuming training set because we don't have targets for the test set
         q = '''select object_id from training_set_meta where target = ?'''
         obj_ids = conn.execute(q, [target]).fetchall()
-        return [cls.get_lc(conn, dataset, o) for (o,) in obj_ids]
+        return [cls.get_lc(conn, 'training_set', o) for (o,) in obj_ids]
