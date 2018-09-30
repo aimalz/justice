@@ -3,6 +3,7 @@ import collections
 import math
 import typing
 
+import sqlite3
 import numpy as np
 import scipy.stats as sps
 
@@ -220,15 +221,35 @@ class _LC:
 
 class SNDatasetLC(_LC):
     """Supernova dataset light curve."""
-
-    @property
-    def expected_bands(self):
-        return ['g', 'r', 'i', 'z']
+    expected_bands = ['g', 'r', 'i', 'z']
 
 
 class OGLEDatasetLC(_LC):
     """OGLE dataset light curve."""
+    expected_bands = ['I', 'V']
 
-    @property
-    def expected_bands(self):
-        return ['I', 'V']
+
+class PlasticcDatasetLC(_LC):
+    metadataKeys = {'object_id', 'ra', 'decl', 'gal_l', 'gal_b', 'ddf',
+                    'hostgal_specz', 'hostgal_photoz', 'hostgal_photoz_err', 'mwebv', 'target'}
+
+    expected_bands = list('ugrizY')
+
+    @classmethod
+    def get_band(cls, conn, dataset, obj_id, band_id):
+
+        q = '''select mjd, flux, flux_err
+                from {}
+                where object_id = ? and passband = ?
+                order by mjd'''.format(dataset)
+        cursor = conn.execute(q, obj_id, band_id)
+        times, fluxes, flux_errs = [numpy.array(series) for series in zip(*cursor.fetchall())]
+        return BandData(times, fluxes, flux_errs)
+
+    @classmethod
+    def get_lc(cls, conn, dataset, obj_id):
+        bands = [cls.get_band(conn, dataset, obj_id, band_id)
+                 for band_id, band in enumerate(cls.expected_bands)]
+        return cls(*bands)
+
+# want to create index on object_id, passband, mjd
