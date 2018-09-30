@@ -230,8 +230,8 @@ class OGLEDatasetLC(_LC):
 
 
 class PlasticcDatasetLC(_LC):
-    metadataKeys = ['object_id', 'ra', 'decl', 'gal_l', 'gal_b', 'ddf',
-                    'hostgal_specz', 'hostgal_photoz', 'hostgal_photoz_err', 'distmod', 'mwebv', 'target']
+    metadata_keys = ['object_id', 'ra', 'decl', 'gal_l', 'gal_b', 'ddf',
+                     'hostgal_specz', 'hostgal_photoz', 'hostgal_photoz_err', 'distmod', 'mwebv', 'target']
 
     expected_bands = list('ugrizY')
 
@@ -253,11 +253,12 @@ class PlasticcDatasetLC(_LC):
         lc = cls(**bands)
 
         meta_row = conn.execute('select * from {}_meta where object_id = ?'.format(dataset), [obj_id]).fetchone()
-        lc.meta = dict(zip(cls.metadataKeys, meta_row))
+        lc.meta = dict(zip(cls.metadata_keys, meta_row))
         return lc
 
     @classmethod
-    def get_lc_by_target(cls, conn, dataset, target):
-        q = '''select object_id from {}_meta where target = ?'''.format(dataset)
+    def get_lc_by_target(cls, conn, target):
+        # assuming training set because we don't have targets for the test set
+        q = '''select object_id from training_set_meta where target = ?'''
         obj_ids = conn.execute(q, [target]).fetchall()
         return [cls.get_lc(conn, dataset, o) for (o,) in obj_ids]
