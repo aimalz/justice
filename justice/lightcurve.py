@@ -274,7 +274,7 @@ class PlasticcDatasetLC(_LC):
     def _sqlite_get_lc_by_target(cls, conn, target):
         q = '''select object_id from training_set_meta where target = ?'''
         obj_ids = conn.execute(q, [target]).fetchall()
-        return [cls.get_lc(conn, 'training_set', o) for (o,) in obj_ids]
+        return [cls._sqlite_get_lc(conn, 'training_set', o) for (o,) in obj_ids]
 
     @classmethod
     def get_lc_by_target(cls, source, target):
