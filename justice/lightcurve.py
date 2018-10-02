@@ -251,7 +251,7 @@ class PlasticcDatasetLC(_LC):
         return BandData(times, fluxes, flux_errs, detected)
 
     @classmethod
-    def get_lc(cls, conn, dataset, obj_id):
+    def _sqlite_get_lc(cls, conn, dataset, obj_id):
         bands = dict((band, cls.get_band(conn, dataset, obj_id, band_id))
                      for band_id, band in enumerate(cls.expected_bands))
         lc = cls(**bands)
@@ -261,8 +261,28 @@ class PlasticcDatasetLC(_LC):
         return lc
 
     @classmethod
-    def get_lc_by_target(cls, conn, target):
-        # assuming training set because we don't have targets for the test set
+    def get_lc(cls, source, dataset, obj_id):
+        if isinstance(source, sqlite3.Connection):
+            return cls._sqlite_get_lc(source, dataset, obj_id)
+        elif isinstance(source, str) and source.endswith('.db'):
+            with sqlite3.connect(source) as conn:
+                return cls._sqlite_get_lc(conn, dataset, obj_id)
+        else:
+            raise NotImplementedError("Don't know how to read LCs from {}", format(source))
+
+    @classmethod
+    def _sqlite_get_lc_by_target(cls, conn, target):
         q = '''select object_id from training_set_meta where target = ?'''
         obj_ids = conn.execute(q, [target]).fetchall()
         return [cls.get_lc(conn, 'training_set', o) for (o,) in obj_ids]
+
+    @classmethod
+    def get_lc_by_target(cls, source, target):
+        # assuming training set because we don't have targets for the test set
+        if isinstance(source, sqlite3.Connection):
+            return cls._sqlite_get_lc_by_target(source, target)
+        elif isinstance(source, str) and source.endswith('.db'):
+            with sqlite3.connect(source) as conn:
+                return cls._sqlite_get_lc_by_target(conn, target)
+        else:
+            raise NotImplementedError("Don't know how to read LCs from {}", format(source))
