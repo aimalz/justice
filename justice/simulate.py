@@ -29,7 +29,7 @@ def make_gauss_shape_fn(scale, center, amplitude, const):
 
 def make_sine_shape_fn(period, phase, amplitude, const):
     def sine(cadence):
-        return amplitude * np.sin(period * cadence + phase) + const
+        return amplitude * np.sin((2 * np.pi / period) * cadence + phase) + const
 
     return sine
 
@@ -65,8 +65,8 @@ class TestLC(lightcurve._LC):
 
     @classmethod
     def make_easy_gauss(cls):
-        gauss_fcn = make_gauss_shape_fn(1.0, 0, 1, 0)
-        xs = make_cadence(np.arange(0, 22.6, .1), [0.] * 226)
+        gauss_fcn = make_gauss_shape_fn(7.0, 20, 1.5, 0)
+        xs = make_cadence(np.arange(0, 226, 1), [0.] * 226)
 
         band = lightcurve.BandData.from_cadence_shape_and_errfracs(
             xs, gauss_fcn, [0] * 226
@@ -81,4 +81,13 @@ class TestLC(lightcurve._LC):
         band = lightcurve.BandData.from_cadence_shape_and_errfracs(
             xs, gauss_fcn, [0.2] * 115
         )
+        return TestLC(b=band)
+
+    @classmethod
+    def make_easy_sine(cls):
+        sin_fcn = make_sine_shape_fn(28.3, 0., 1., 2.)
+        xs = make_cadence(np.arange(0, 226, 1), [0.] * 226)
+
+        band = lightcurve.BandData.from_cadence_shape_and_errfracs(xs, sin_fcn, [
+                                                                   0] * 226)
         return TestLC(b=band)

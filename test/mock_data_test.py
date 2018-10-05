@@ -19,10 +19,10 @@ def test_make_gauss():
 def test_make_sine():
 
     sine_fcn = sim.make_sine_shape_fn(1.0, 0, 1, 0)
-    xs = sim.make_cadence(np.arange(0.0, pi * 9 / 8, pi / 8), [0.] * 9)
+    xs = sim.make_cadence(np.arange(0.0, 9 / 8, 1 / 8), [0.] * 9)
     ys = sine_fcn(xs)
     assert np.abs(ys[0]) < 1e-6
-    assert np.abs(ys[4] - 1) < 1e-6
+    assert np.abs(ys[2] - 1) < 1e-6
     assert np.abs(ys[8]) < 1e-6
 
 
