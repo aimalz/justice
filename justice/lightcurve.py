@@ -3,6 +3,7 @@ import collections
 import math
 import typing
 
+import sqlite3
 import numpy as np
 import scipy.stats as sps
 
@@ -13,9 +14,9 @@ class BandData(object):
     """Light curve data for a single band.
     """
 
-    __slots__ = ('time', 'flux', 'flux_err')
+    __slots__ = ('time', 'flux', 'flux_err', 'detected')
 
-    def __init__(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray) -> None:
+    def __init__(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray, detected: np.ndarray = None) -> None:
         """Initializes BandData.
 
         :param time: Time values, 1-D np float array.
@@ -26,6 +27,10 @@ class BandData(object):
         self.time = time
         self.flux = flux
         self.flux_err = flux_err
+        if detected is None:
+            self.detected = np.ones_like(self.time)
+        else:
+            self.detected = detected
 
     def __repr__(self) -> str:
         """Formats light curve to a string for debugging."""
@@ -220,15 +225,64 @@ class _LC:
 
 class SNDatasetLC(_LC):
     """Supernova dataset light curve."""
-
-    @property
-    def expected_bands(self):
-        return ['g', 'r', 'i', 'z']
+    expected_bands = ['g', 'r', 'i', 'z']
 
 
 class OGLEDatasetLC(_LC):
     """OGLE dataset light curve."""
+    expected_bands = ['I', 'V']
 
-    @property
-    def expected_bands(self):
-        return ['I', 'V']
+
+class PlasticcDatasetLC(_LC):
+    metadata_keys = ['object_id', 'ra', 'decl', 'gal_l', 'gal_b', 'ddf',
+                     'hostgal_specz', 'hostgal_photoz', 'hostgal_photoz_err', 'distmod', 'mwebv', 'target']
+
+    expected_bands = list('ugrizY')
+
+    @classmethod
+    def get_band(cls, conn, dataset, obj_id, band_id):
+
+        q = '''select mjd, flux, flux_err, detected
+                from {}
+                where object_id = ? and passband = ?
+                order by mjd'''.format(dataset)
+        cursor = conn.execute(q, [obj_id, band_id])
+        times, fluxes, flux_errs, detected = [np.array(series) for series in zip(*cursor.fetchall())]
+        return BandData(times, fluxes, flux_errs, detected)
+
+    @classmethod
+    def _sqlite_get_lc(cls, conn, dataset, obj_id):
+        bands = dict((band, cls.get_band(conn, dataset, obj_id, band_id))
+                     for band_id, band in enumerate(cls.expected_bands))
+        lc = cls(**bands)
+
+        meta_row = conn.execute('select * from {}_meta where object_id = ?'.format(dataset), [obj_id]).fetchone()
+        lc.meta = dict(zip(cls.metadata_keys, meta_row))
+        return lc
+
+    @classmethod
+    def get_lc(cls, source, dataset, obj_id):
+        if isinstance(source, sqlite3.Connection):
+            return cls._sqlite_get_lc(source, dataset, obj_id)
+        elif isinstance(source, str) and source.endswith('.db'):
+            with sqlite3.connect(source) as conn:
+                return cls._sqlite_get_lc(conn, dataset, obj_id)
+        else:
+            raise NotImplementedError("Don't know how to read LCs from {}", format(source))
+
+    @classmethod
+    def _sqlite_get_lc_by_target(cls, conn, target):
+        q = '''select object_id from training_set_meta where target = ?'''
+        obj_ids = conn.execute(q, [target]).fetchall()
+        return [cls._sqlite_get_lc(conn, 'training_set', o) for (o,) in obj_ids]
+
+    @classmethod
+    def get_lc_by_target(cls, source, target):
+        # assuming training set because we don't have targets for the test set
+        if isinstance(source, sqlite3.Connection):
+            return cls._sqlite_get_lc_by_target(source, target)
+        elif isinstance(source, str) and source.endswith('.db'):
+            with sqlite3.connect(source) as conn:
+                return cls._sqlite_get_lc_by_target(conn, target)
+        else:
+            raise NotImplementedError("Don't know how to read LCs from {}", format(source))
