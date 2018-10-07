@@ -13,12 +13,16 @@ import pandas as pd
 _data_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../data"))
 
 
-def _filtered_fetch(cursor, *, col_idx, bad_col_value="target"):
+def _filtered_fetch(df):
     """Filters out erroneous row filled with column names.
 
     TODO(gatoatigrado): Fix SQL ingestion or use of fetchall in the future.
     """
-    return [row for row in cursor if row[col_idx] != bad_col_value]
+    df = df.copy()
+    df = df[df['target'] != 'target']
+    for key in ['object_id', 'target']:
+        df[key] = pd.to_numeric(df[key])
+    return df
 
 
 class PlasticcDataset(object):
@@ -27,15 +31,11 @@ class PlasticcDataset(object):
         self.rng = random.Random(seed)
         self.filename = filename
         self.conn = sqlite3.connect(filename)
-        self.index_df = pd.DataFrame(
-            _filtered_fetch(
-                self.conn.execute(
-                    "select object_id, target from "
-                    "{}_meta".format(base_table_name)
-                ).fetchall(),
-                col_idx=-1
-            ),
-            columns=["source_id", "target"]
+        self.index_df = _filtered_fetch(
+            pd.read_sql(
+                sql="select object_id, target from {}_meta".format(base_table_name),
+                con=self.conn,
+            )
         )
 
     def __getitem__(self, key: str) -> pd.Series:
@@ -55,7 +55,7 @@ class PlasticcDataset(object):
         return self.rng.randint(0, len(self.index_df) - 1)
 
     def random_lc(self):
-        obj_id = int(self[self.random_idx()].source_id)
+        obj_id = int(self[self.random_idx()].object_id)
         return obj_id, self.get_lc(obj_id)
 
     @classmethod
