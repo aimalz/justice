@@ -268,8 +268,8 @@ class PlasticcDatasetLC(_LC):
 
     @classmethod
     def _sqlite_get_lc(cls, conn, dataset, obj_id):
-        conn.execute("select name from sqlite_master where type='table' and name like '{}_blob'".format(dataset))
-        if conn.fetchone():
+        cursor = conn.execute("select name from sqlite_master where type='table' and name like '{}_blob'".format(dataset))
+        if cursor.fetchone():
             loader = cls._get_band_from_blobs
         else:
             loader = cls._get_band_from_raw
