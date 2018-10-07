@@ -77,7 +77,8 @@ def plot_lcs(lcs, save=None):
                 lci.bands[b].flux,
                 yerr=lci.bands[b].flux_err,
                 linestyle='None',
-                marker='.'
+                marker='.',
+                ecolor=[_default_colors[d] for d in lci.bands[b].detected]
             )
     plt.xlabel('time')
     plt.ylabel('flux')

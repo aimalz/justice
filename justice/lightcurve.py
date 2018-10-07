@@ -215,8 +215,8 @@ class _LC:
         :return: Transform object.
         """
         # noinspection PyTypeChecker
-        time_bounds = np.percentile([np.concatenate(self.all_times(), axis=0)],
-                                    q=[5.0, 95.0])
+        # time_bounds = np.percentile([np.concatenate(self.all_times(), axis=0)],
+        #                             q=[5.0, 95.0])
 
         def _per_band_transform(band_data: BandData):
             return xform.Xform(  # type: ignore
@@ -245,7 +245,7 @@ class PlasticcDatasetLC(_LC):
         'hostgal_photoz', 'hostgal_photoz_err', 'distmod', 'mwebv', 'target'
     ]
 
-    expected_bands = list('ugrizY')
+    expected_bands = list('ugrizy')
 
     @classmethod
     def _get_band_from_raw(cls, conn, dataset, obj_id, band_id):
