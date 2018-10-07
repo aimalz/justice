@@ -10,7 +10,7 @@ import sqlite3
 
 import pandas as pd
 
-_data_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../data"))
+from justice import path_util
 
 
 def _filtered_fetch(df):
@@ -61,13 +61,13 @@ class PlasticcDataset(object):
     @classmethod
     def training_data(cls):
         return cls(
-            filename=os.path.join(_data_dir, "plasticc_training_data.db"),
+            filename=str(path_util.data_dir / "plasticc_training_data.db"),
             base_table_name="training_set"
         )
 
     @classmethod
     def test_data(cls):
         return cls(
-            filename=os.path.join(_data_dir, "plasticc_test_data.db"),
+            filename=str(path_util.data_dir / "plasticc_test_data.db"),
             base_table_name="test_set"
         )

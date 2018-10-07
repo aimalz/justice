@@ -10,11 +10,11 @@ import random
 from justice import lightcurve
 from justice.datasets import mmap_array
 
-ogle_dir = os.path.join(mmap_array.default_array_dir, 'ogle_iii')
+ogle_dir = mmap_array.default_array_dir / 'ogle_iii'
 
 
 def for_subset(name):
-    return mmap_array.IndexedArrayDescriptor(base_dir=os.path.join(ogle_dir, name))
+    return mmap_array.IndexedArrayDescriptor(base_dir=(ogle_dir / name))
 
 
 class OgleDataset(mmap_array.IndexedArray):

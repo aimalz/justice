@@ -17,8 +17,8 @@ import pandas as pd
 from justice import lightcurve
 from justice.datasets import mmap_array
 
-sn_dir = os.path.join(mmap_array.default_array_dir, 'sn_phot_cc')
-index_filename = os.path.join(sn_dir, 'index_df.pickle')
+sn_dir = mmap_array.default_array_dir / 'sn_phot_cc'
+index_filename = sn_dir / 'index_df.pickle'
 all_lc_data = mmap_array.MmapArrayFile('all', array_dir=sn_dir, order='C')
 
 
