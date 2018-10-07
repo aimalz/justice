@@ -2,9 +2,9 @@ import os
 import os.path
 import subprocess
 
-time_series_dir = os.path.abspath(
-    os.path.join(os.path.abspath(__file__), "../../time_series_demo")
-)
+from justice import path_util
+
+time_series_dir = path_util.project_root / "time_series_demo"
 
 
 def main():

@@ -4,7 +4,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from justice import mmap_array
+from justice.datasets import mmap_array
 
 
 def test_write_indexed(tmpdir):

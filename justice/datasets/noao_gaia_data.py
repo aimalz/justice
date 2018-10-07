@@ -17,12 +17,11 @@ import time
 import numpy as np
 import pandas as pd
 
-from justice import mmap_array
+from justice import path_util
+from justice.datasets import mmap_array
 
-pickle_file = os.path.abspath(
-    os.path.join(os.path.abspath(__file__), "../../gaia-selection.pickle")
-)
-gaia_dir = os.path.join(mmap_array.default_array_dir, 'gaia')
+pickle_file = str(path_util.project_root / "gaia-selection.pickle")
+gaia_dir = mmap_array.default_array_dir / 'gaia'
 source_id_to_ranges_index = mmap_array.MmapArrayFile(
     'source_id_to_ranges_index', array_dir=gaia_dir, order='C'
 )

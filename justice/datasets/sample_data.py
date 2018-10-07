@@ -6,8 +6,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from justice import download_data
-from justice import mmap_array
+from justice.datasets import download_data, mmap_array
 
 lc_data_dir = os.path.join(download_data.time_series_dir, 'lc_data')
 
@@ -17,7 +16,10 @@ def get_data_names():
         raise EnvironmentError("Please run the download_data script first.")
     csv_files = glob.glob(os.path.join(lc_data_dir, '*.csv'))
     if not csv_files:
-        raise ValueError("Didn't find any CSV files in time_series_demo/lc_data. Maybe that repo changed?")
+        raise ValueError(
+            "Didn't find any CSV files in time_series_demo/lc_data. "
+            "Maybe that repo changed?"
+        )
     return sorted([os.path.basename(f).replace(".csv", "") for f in csv_files])
 
 

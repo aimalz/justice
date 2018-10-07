@@ -16,7 +16,13 @@ class BandData(object):
 
     __slots__ = ('time', 'flux', 'flux_err', 'detected')
 
-    def __init__(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray, detected: np.ndarray = None) -> None:
+    def __init__(
+        self,
+        time: np.ndarray,
+        flux: np.ndarray,
+        flux_err: np.ndarray,
+        detected: np.ndarray = None
+    ) -> None:
         """Initializes BandData.
 
         :param time: Time values, 1-D np float array.
@@ -34,8 +40,10 @@ class BandData(object):
 
     def __repr__(self) -> str:
         """Formats light curve to a string for debugging."""
-        return 'BandData(time={self.time}, flux={self.flux}, flux_err={self.flux_err})'.format(
-            self=self)
+        return (
+            'BandData(time={self.time}, flux={self.flux}, flux_err={'
+            'self.flux_err})'
+        ).format(self=self)
 
     def __add__(self, other: 'BandData') -> 'BandData':
         """Concatenates this light curve with another, and sorts by time.
@@ -205,7 +213,9 @@ class _LC:
 
         This method scales points, and is probably not physically realistic
 
-        :param output_flux_scale: Magnitude of largest output flux value. For things like arclen alignment, consider setting this to something comparable to the time scale.
+        :param output_flux_scale: Magnitude of largest output flux value. For things like
+            arclen alignment, consider setting this to something comparable to the time
+            scale.
         :return: Transform object.
         """
         # noinspection PyTypeChecker
@@ -234,8 +244,10 @@ class OGLEDatasetLC(_LC):
 
 
 class PlasticcDatasetLC(_LC):
-    metadata_keys = ['object_id', 'ra', 'decl', 'gal_l', 'gal_b', 'ddf',
-                     'hostgal_specz', 'hostgal_photoz', 'hostgal_photoz_err', 'distmod', 'mwebv', 'target']
+    metadata_keys = [
+        'object_id', 'ra', 'decl', 'gal_l', 'gal_b', 'ddf', 'hostgal_specz',
+        'hostgal_photoz', 'hostgal_photoz_err', 'distmod', 'mwebv', 'target'
+    ]
 
     expected_bands = list('ugrizY')
 
@@ -247,12 +259,15 @@ class PlasticcDatasetLC(_LC):
                 where object_id = ? and passband = ?
                 order by mjd'''.format(dataset)
         cursor = conn.execute(q, [obj_id, band_id])
-        times, fluxes, flux_errs, detected = [np.array(series) for series in zip(*cursor.fetchall())]
+        times, fluxes, flux_errs, detected = [
+            np.array(series) for series in zip(*cursor.fetchall())
+        ]
         return BandData(times, fluxes, flux_errs, detected)
 
     @classmethod
     def _get_band_from_blobs(cls, conn, dataset, obj_id, band_id):
-        res = conn.execute('''
+        res = conn.execute(
+            '''
             select mjd, flux, flux_err, detected
             from {}_blob
             where object_id = ?
@@ -268,8 +283,11 @@ class PlasticcDatasetLC(_LC):
 
     @classmethod
     def _sqlite_get_lc(cls, conn, dataset, obj_id):
-        cursor = conn.execute("select name from sqlite_master where type='table' and name like '{}_blob'".format(dataset))
-        if cursor.fetchone():
+        has_blobs = conn.execute(
+            "select name from sqlite_master where type='table' and "
+            "name like '{}_blob'".format(dataset)
+        ).fetchone()
+        if has_blobs:
             loader = cls._get_band_from_blobs
         else:
             loader = cls._get_band_from_raw
@@ -277,7 +295,9 @@ class PlasticcDatasetLC(_LC):
                      for band_id, band in enumerate(cls.expected_bands))
         lc = cls(**bands)
 
-        meta_row = conn.execute('select * from {}_meta where object_id = ?'.format(dataset), [obj_id]).fetchone()
+        meta_row = conn.execute(
+            'select * from {}_meta where object_id = ?'.format(dataset), [obj_id]
+        ).fetchone()
         lc.meta = dict(zip(cls.metadata_keys, meta_row))
         return lc
 
@@ -289,13 +309,15 @@ class PlasticcDatasetLC(_LC):
             with sqlite3.connect(source) as conn:
                 return cls._sqlite_get_lc(conn, dataset, obj_id)
         else:
-            raise NotImplementedError("Don't know how to read LCs from {}", format(source))
+            raise NotImplementedError(
+                "Don't know how to read LCs from {}", format(source)
+            )
 
     @classmethod
     def _sqlite_get_lc_by_target(cls, conn, target):
         q = '''select object_id from training_set_meta where target = ?'''
         obj_ids = conn.execute(q, [target]).fetchall()
-        return [cls._sqlite_get_lc(conn, 'training_set', o) for (o,) in obj_ids]
+        return [cls._sqlite_get_lc(conn, 'training_set', o) for (o, ) in obj_ids]
 
     @classmethod
     def get_lc_by_target(cls, source, target):
@@ -306,4 +328,6 @@ class PlasticcDatasetLC(_LC):
             with sqlite3.connect(source) as conn:
                 return cls._sqlite_get_lc_by_target(conn, target)
         else:
-            raise NotImplementedError("Don't know how to read LCs from {}", format(source))
+            raise NotImplementedError(
+                "Don't know how to read LCs from {}", format(source)
+            )

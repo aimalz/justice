@@ -9,7 +9,7 @@ import random
 import numpy as np
 import tensorflow as tf
 
-from justice import sample_data
+from justice.datasets import sample_data
 
 if tuple(map(int, tf.__version__.split('.')))[0:2] < (1, 9):
     raise ImportError(
@@ -97,13 +97,13 @@ def sample_data_input_fn(params):
     def get_samples_py_op(idx_array):
         assert isinstance(idx_array, np.ndarray)
         assert idx_array.shape == (batch_size, )
-        results = np.zeros((batch_size, window_size, num_columns), dtype=np_dtype)
+        samp_results = np.zeros((batch_size, window_size, num_columns), dtype=np_dtype)
         for i, sample_idx in enumerate(idx_array):
             start_idx = random.choice(valid_start_window_indices[sample_idx])
-            results[i, :, :] = all_downsampled[sample_idx][start_idx:
-                                                           (start_idx + window_size)]
-        assert results.shape == (batch_size, window_size, num_columns)
-        return results
+            samp_results[i, :, :] = all_downsampled[sample_idx][start_idx: (
+                start_idx + window_size)]
+        assert samp_results.shape == (batch_size, window_size, num_columns)
+        return samp_results
 
     def get_window_sample(idx_tensor):
         samples = tf.py_func(get_samples_py_op, [idx_tensor], np_dtype)
@@ -152,7 +152,7 @@ def sample_data_input_fn(params):
     return dataset
 
 
-if __name__ == '__main__':
+def main():
     dataset = sample_data_input_fn({
         'window_size': 5,
         'batch_size': 8,
@@ -162,3 +162,7 @@ if __name__ == '__main__':
         for _ in range(10):
             results = sess.run(tensors)
             print(results['goal'])
+
+
+if __name__ == '__main__':
+    main()

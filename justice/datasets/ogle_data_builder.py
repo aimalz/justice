@@ -11,7 +11,7 @@ import re
 
 import pandas as pd
 
-from justice import ogle_data
+from justice.datasets import ogle_data
 
 # NOTE(gatoatigrado): Add new filename matches as necessary.
 _extract_name = re.compile(r"(OGLE-LMC-CEP-\d+).dat")

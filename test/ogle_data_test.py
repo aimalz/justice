@@ -5,13 +5,14 @@ from __future__ import division
 from __future__ import print_function
 
 import os.path
+import pathlib
 
-from justice import ogle_data, ogle_data_builder
+from justice.datasets import ogle_data_builder, ogle_data
 
 
 def test_build_and_get_random(testdata_dir, tmpdir):
     ogle_dir = str(tmpdir.mkdir("test_ogle"))
-    ogle_data.ogle_dir = ogle_dir
+    ogle_data.ogle_dir = pathlib.Path(ogle_dir)
     ia_descriptor = ogle_data.for_subset("test_name")
     assert ia_descriptor.index_filename.startswith(ogle_dir)
 
