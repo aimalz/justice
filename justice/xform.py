@@ -23,8 +23,10 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
             kwargs.setdefault("dx", 1.0)
             kwargs.setdefault("dy", 1.0)
             kwargs.setdefault("bc", {'b': 0.0})
+            # noinspection PyTypeChecker
             return super(cls, Xform).__new__(cls, **kwargs)
         else:
+            # noinspection PyTypeChecker
             return super(cls, Xform).__new__(cls, *args)
 
     def as_array(self):
@@ -43,6 +45,7 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
 
 
 class PerBandTransforms(dict):
+    # noinspection PyProtectedMember
     def transform(self, lc: 'lightcurve._LC'):
         if frozenset(self.keys()) != frozenset(lc.expected_bands):
             raise ValueError(

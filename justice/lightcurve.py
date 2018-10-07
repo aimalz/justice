@@ -40,8 +40,10 @@ class BandData(object):
 
     def __repr__(self) -> str:
         """Formats light curve to a string for debugging."""
-        return 'BandData(time={self.time}, flux={self.flux}, flux_err={self.flux_err})'.format(
-            self=self)
+        return (
+            'BandData(time={self.time}, flux={self.flux}, flux_err={'
+            'self.flux_err})'
+        ).format(self=self)
 
     def __add__(self, other: 'BandData') -> 'BandData':
         """Concatenates this light curve with another, and sorts by time.
@@ -211,7 +213,9 @@ class _LC:
 
         This method scales points, and is probably not physically realistic
 
-        :param output_flux_scale: Magnitude of largest output flux value. For things like arclen alignment, consider setting this to something comparable to the time scale.
+        :param output_flux_scale: Magnitude of largest output flux value. For things like
+            arclen alignment, consider setting this to something comparable to the time
+            scale.
         :return: Transform object.
         """
         # noinspection PyTypeChecker

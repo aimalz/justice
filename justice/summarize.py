@@ -1,7 +1,5 @@
 """Tools for summarizing lightcurve data into statistics"""
 
-import matplotlib
-matplotlib.use("Agg")
 import GPy
 import numpy as np
 import scipy.optimize as spo
@@ -32,9 +30,9 @@ def opt_arclen(
     lca: lightcurve._LC,
     lcb: lightcurve._LC,
     ivals=None,
-    constraints=[],
+    constraints=None,
     method='Nelder-Mead',
-    options={'maxiter': 10000},
+    options=None,
     vb=True,
 ) -> xform.Xform:
     """
@@ -49,13 +47,17 @@ def opt_arclen(
     :param vb: Boolean verbose
     :return: best xform
     """
+    if constraints is None:
+        constraints = []
+    if options is None:
+        options = {'maxiter': 10000}
     if ivals is None:
         ivals = generate_ivals(lca)
 
     if method != 'Nelder-Mead':
 
-        def pos_dil(xform):
-            return (min(xform.dx, xform.dy))
+        def pos_dil(xf: xform.Xform):
+            return min(xf.dx, xf.dy)
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
@@ -96,7 +98,7 @@ def pred_gp(lctrain, xpred, kernel=None):
     ypred, yvarpred = gp.predict(xpred)
     lcpred = LC(xpred, ypred, np.sqrt(yvarpred))
     fin_like = gp.log_likelihood()
-    return (lcpred, fin_like)
+    return lcpred, fin_like
 
 
 class OverlapCostComponent(object):
@@ -152,9 +154,9 @@ def opt_gp(
     lca,
     lcb,
     ivals=None,
-    constraints=[],
+    constraints=None,
     method='Nelder-Mead',
-    options={'maxiter': 10000},
+    options=None,
     vb=True,
     overlap_cost_fcn=None,
     component_sensitivity=None,
@@ -173,6 +175,10 @@ def opt_gp(
         be affecting/fixing optimizer that much yet.
     :return: Resulting transformation for lcb.
     """
+    if constraints is None:
+        constraints = []
+    if options is None:
+        options = {'maxiter': 10000}
     if ivals is None:
         ivals = generate_ivals(lca)
 
@@ -189,8 +195,8 @@ def opt_gp(
 
     if method != 'Nelder-Mead':
         # don't know if this way of handling constraints actually works -- untested!
-        def pos_dil(xform):
-            return (min(xform.dx, xform.dy))
+        def pos_dil(xf: xform.Xform):
+            return min(xf.dx, xf.dy)
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:

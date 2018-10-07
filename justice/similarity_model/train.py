@@ -16,10 +16,10 @@ import os.path
 
 import tensorflow as tf
 
+from justice import path_util
 from justice.similarity_model import model, training_data
 
-model_base_dir = os.path.abspath(
-    os.path.join(os.path.abspath(__file__), "../tf_models"))
+model_base_dir = path_util.models_dir / 'legacy_similarity'
 
 
 def main():
@@ -28,12 +28,11 @@ def main():
     symmetric = True
     for dropout in [0.7]:
         model_name = 'sample_{}_drop{:.2f}_{}_{}_v3'.format(
-            'sym' if symmetric else 'asym',
-            dropout,
-            *layer_sizes)
+            'sym' if symmetric else 'asym', dropout, *layer_sizes
+        )
         estimator = tf.estimator.Estimator(
             model_fn=model.model_fn,
-            model_dir=os.path.join(model_base_dir, model_name),
+            model_dir=str(model_base_dir / model_name),
             params={
                 'batch_size': 32,
                 'window_size': 5,
@@ -43,8 +42,7 @@ def main():
                 'lr_decay_steps': steps // 10,
             }
         )
-        estimator.train(input_fn=training_data.sample_data_input_fn,
-                        max_steps=steps)
+        estimator.train(input_fn=training_data.sample_data_input_fn, max_steps=steps)
 
 
 if __name__ == '__main__':
