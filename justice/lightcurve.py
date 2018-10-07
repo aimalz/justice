@@ -240,7 +240,7 @@ class PlasticcDatasetLC(_LC):
     expected_bands = list('ugrizY')
 
     @classmethod
-    def get_band(cls, conn, dataset, obj_id, band_id):
+    def _get_band_from_raw(cls, conn, dataset, obj_id, band_id):
 
         q = '''select mjd, flux, flux_err, detected
                 from {}
@@ -251,8 +251,29 @@ class PlasticcDatasetLC(_LC):
         return BandData(times, fluxes, flux_errs, detected)
 
     @classmethod
+    def _get_band_from_blobs(cls, conn, dataset, obj_id, band_id):
+        res = conn.execute('''
+            select mjd, flux, flux_err, detected
+            from {}_blob
+            where object_id = ?
+            and passband = ?
+            '''.format(dataset), [obj_id, band_id]
+        )
+        raw_times, raw_fluxes, raw_flux_errs, raw_detected = res.fetchone()
+        times = np.frombuffer(raw_times, dtype=np.float64)
+        fluxes = np.frombuffer(raw_fluxes, dtype=np.float64)
+        flux_errs = np.frombuffer(raw_flux_errs, dtype=np.float64)
+        detected = np.frombuffer(raw_detected[::8], dtype=np.bool8)
+        return BandData(times, fluxes, flux_errs, detected)
+
+    @classmethod
     def _sqlite_get_lc(cls, conn, dataset, obj_id):
-        bands = dict((band, cls.get_band(conn, dataset, obj_id, band_id))
+        conn.execute("select name from sqlite_master where type='table' and name like '{}_blob'".format(dataset))
+        if conn.fetchone():
+            loader = cls._get_band_from_blobs
+        else:
+            loader = cls._get_band_from_raw
+        bands = dict((band, loader(conn, dataset, obj_id, band_id))
                      for band_id, band in enumerate(cls.expected_bands))
         lc = cls(**bands)
 
