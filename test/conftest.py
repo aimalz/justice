@@ -11,6 +11,8 @@ import tempfile
 
 import pytest
 
+# noinspection PyTrailingSemicolon
+import matplotlib; matplotlib.use("Agg")  # noqa, yapf: disable
 from justice import mmap_array, supernova_data
 
 _testdata_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "../testdata"))

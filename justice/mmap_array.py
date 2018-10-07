@@ -93,7 +93,8 @@ class IndexedArrayDescriptor(object):
         """Writes parsed data.
 
         :param index_rows: List of dicts, each with information about each sub-array.
-        :param data: List of sub-arrays; each sub-array is a list of (time, flux, flux_err) values.
+        :param data: List of sub-arrays; each sub-array is a list of
+            (time, flux, flux_err) values.
         :param set_index: Name of column to use as data frame index.
         """
         if len(index_rows) != len(data):
