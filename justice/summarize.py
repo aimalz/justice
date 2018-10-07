@@ -1,5 +1,7 @@
 """Tools for summarizing lightcurve data into statistics"""
 
+import matplotlib
+matplotlib.use("Agg")
 import GPy
 import numpy as np
 import scipy.optimize as spo
