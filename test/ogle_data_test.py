@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import os.path
 
-from justice import ogle_data, ogle_data_builder
+from justice.datasets import ogle_data_builder, ogle_data
 
 
 def test_build_and_get_random(testdata_dir, tmpdir):

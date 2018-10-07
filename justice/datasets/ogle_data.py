@@ -7,7 +7,8 @@ from __future__ import print_function
 import os.path
 import random
 
-from justice import mmap_array, lightcurve
+from justice import lightcurve
+from justice.datasets import mmap_array
 
 ogle_dir = os.path.join(mmap_array.default_array_dir, 'ogle_iii')
 

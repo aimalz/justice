@@ -9,7 +9,7 @@ import random
 import numpy as np
 import tensorflow as tf
 
-from justice import sample_data
+from justice.datasets import sample_data
 
 if tuple(map(int, tf.__version__.split('.')))[0:2] < (1, 9):
     raise ImportError(

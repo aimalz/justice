@@ -6,8 +6,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from justice import download_data
-from justice import mmap_array
+from justice.datasets import download_data, mmap_array
 
 lc_data_dir = os.path.join(download_data.time_series_dir, 'lc_data')
 
