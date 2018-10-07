@@ -8,9 +8,9 @@ if typing.TYPE_CHECKING:
     from justice import lightcurve
 
 
-class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
+class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'rs'))):
     """
-    translation, dilation in x, y, plus band coupling
+    translation, dilation in x, y, plus redshift
 
     """
     __slots__ = ()
@@ -19,10 +19,10 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
         if kwargs or not args:  # Using kwargs is discouraged as of right now
             assert not args
             kwargs.setdefault("tx", 0.0)
-            kwargs.setdefault("ty", 0.0)
+            kwargs.setdefault("ty", [0.0] * len(lc.bands))
             kwargs.setdefault("dx", 1.0)
             kwargs.setdefault("dy", 1.0)
-            kwargs.setdefault("bc", {'b': 0.0})
+            kwargs.setdefault("rs", 0.0)
             return super(cls, Xform).__new__(cls, **kwargs)
         else:
             return super(cls, Xform).__new__(cls, *args)
@@ -30,10 +30,10 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
     def as_array(self):
         return np.array(nest.flatten(self), dtype=np.float64)
 
-    def transform_band(self, bd, bc):
+    def transform_band(self, bd, ty_ind):
         # check that error really does behave this way
         new_x = self.dx * (bd.time + self.tx)
-        new_y = self.dy * (bd.flux + self.ty)
+        new_y = self.dy * (bd.flux + self.ty[ty_ind])
         new_yerr = np.sqrt(self.dy) * bd.flux_err
         return bd.__class__(new_x, new_y, new_yerr)
 
