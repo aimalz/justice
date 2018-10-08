@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from justice import supernova_data
+from justice.datasets import supernova_data
 
 
 def test_random_id_functions(sn_dataset):

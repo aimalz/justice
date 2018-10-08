@@ -15,16 +15,23 @@ import numpy as np
 import pandas as pd
 
 from justice import lightcurve
-from justice import mmap_array
+from justice.datasets import mmap_array
 
-sn_dir = os.path.join(mmap_array.default_array_dir, 'sn_phot_cc')
-index_filename = os.path.join(sn_dir, 'index_df.pickle')
+sn_dir = mmap_array.default_array_dir / 'sn_phot_cc'
+index_filename = sn_dir / 'index_df.pickle'
 all_lc_data = mmap_array.MmapArrayFile('all', array_dir=sn_dir, order='C')
+
+
+def _parse_truth_file_dat_line(line):
+    filename, obj_cls = line.strip().split()
+    return filename, obj_cls
 
 
 def parse_truth(filename):
     with open(filename, 'r') as truthfile:
-        return dict(line.strip().split() for line in truthfile if ".DAT" in line)
+        return dict(
+            _parse_truth_file_dat_line(line) for line in truthfile if ".DAT" in line
+        )
 
 
 def make_parse_fcn(truth_filename):
