@@ -1,4 +1,5 @@
 """Some handy diagnostic plots"""
+from typing import List, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,6 +8,7 @@ import astropy.stats
 
 # would like to have these pass axes between each other to combine what's being plotted
 # also want to accommodate multiple filters/bands of y
+from justice.features import frequency_distribution
 
 
 def setup_plot():
@@ -57,13 +59,20 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
     return fig
 
 
-def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
+def plot_lcs(
+    lcs,
+    *,
+    save=None,
+    plot_frequency=False,
+    frequency_transform: frequency_distribution.LsTransformBase = None
+):
     """Plot multiple (or single) lightcurves at once
 
     :param lcs: list of lightcurves
     :param save: boolean to save or not
     :param plot_frequency: Whether to plot frequencies alongside light curves.
     :param frequency: Frequency scale. Defaults to a np.linspace.
+    :param frequency_transform: Transformation class.
     :return: figure object
     """
     # This needs a way to have names of the bands, but it works for now.
@@ -72,8 +81,11 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
     numbands = lcs[0].nbands
     bands = lcs[0].bands
 
-    if frequency == 'default':
-        frequency = np.linspace(1e-2, 1, 50)
+    frequency_per_lc: List[frequency_distribution.MultiBandFrequency] = []
+    if plot_frequency:
+        if frequency_transform is None:
+            frequency_transform = frequency_distribution.IndependentLs()
+        frequency_per_lc = list(map(frequency_transform.transform, lcs))
 
     fig, ax = plt.subplots(
         nrows=numbands,
@@ -97,12 +109,8 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
 
-        if plot_frequency:
-            for lc in lcs:
-                power = astropy.stats.LombScargle(
-                    lc.bands[b].time, lc.bands[b].flux, lc.bands[b].flux_err
-                ).power(frequency)
-                ax[i, 1].plot(frequency, power)
+        for multi_band_frequency in frequency_per_lc:
+            ax[i, 1].plot(multi_band_frequency.frequency, multi_band_frequency[b])
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return fig

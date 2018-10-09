@@ -74,11 +74,26 @@ class TestLC(lightcurve._LC):
         return TestLC(b=band)
 
     @classmethod
-    def make_hard_gauss(cls):
-        gauss_fcn = make_gauss_shape_fn(1.5, 1, 1.2, .3)
+    def make_hard_gauss(cls, scale=1.5) -> 'TestLC':
+        """Makes a difficult Gaussian value.
+
+        :param scale: Width of gaussian.
+        :return: Light curve.
+        """
+        gauss_fcn = make_gauss_shape_fn(scale, 1, 1.2, .3)
         xs = make_cadence(np.arange(0, 11.5, .1), [0.025] * 115)
 
         band = lightcurve.BandData.from_cadence_shape_and_errfracs(
             xs, gauss_fcn, [0.2] * 115
+        )
+        return TestLC(b=band)
+
+    @classmethod
+    def make_realistic_gauss(cls, scale=30.0, xerr=0.25, noise=0.1) -> 'TestLC':
+        gauss_fcn = make_gauss_shape_fn(scale=scale, center=20, amplitude=1.2, const=.3)
+        xs = make_cadence(np.arange(0, 230, 2), [xerr] * 115)
+
+        band = lightcurve.BandData.from_cadence_shape_and_errfracs(
+            xs, gauss_fcn, [noise] * 115
         )
         return TestLC(b=band)
