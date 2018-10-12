@@ -11,5 +11,5 @@ instead.) Then run ingestion scripts,
 ```sh
 cd data/
 sqlite3 plasticc_training_data.db < ../scripts/create_training_set.sql
-sqlite3 plasticc_test_data.db < ../scripts/create_training_set.sql
+sqlite3 plasticc_test_data.db < ../scripts/create_test_set.sql
 ```
