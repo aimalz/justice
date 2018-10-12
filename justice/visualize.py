@@ -8,7 +8,7 @@ import astropy.stats
 
 # would like to have these pass axes between each other to combine what's being plotted
 # also want to accommodate multiple filters/bands of y
-from justice.features import frequency_distribution
+from justice.features import period_distribution
 
 
 def setup_plot():
@@ -63,16 +63,16 @@ def plot_lcs(
     lcs,
     *,
     save=None,
-    plot_frequency=False,
-    frequency_transform: frequency_distribution.LsTransformBase = None
+    plot_period=False,
+    period_transform: period_distribution.LsTransformBase = None
 ):
     """Plot multiple (or single) lightcurves at once
 
     :param lcs: list of lightcurves
     :param save: boolean to save or not
-    :param plot_frequency: Whether to plot frequencies alongside light curves.
-    :param frequency: Frequency scale. Defaults to a np.linspace.
-    :param frequency_transform: Transformation class.
+    :param plot_period: Whether to plot periods alongside light curves.
+    :param period: Period scale. Defaults to a np.linspace.
+    :param Period_transform: Transformation class.
     :return: figure object
     """
     # This needs a way to have names of the bands, but it works for now.
@@ -81,18 +81,18 @@ def plot_lcs(
     numbands = lcs[0].nbands
     bands = lcs[0].bands
 
-    frequency_per_lc: List[frequency_distribution.MultiBandFrequency] = []
-    if plot_frequency:
-        if frequency_transform is None:
-            frequency_transform = frequency_distribution.IndependentLs()
-        frequency_per_lc = list(map(frequency_transform.transform, lcs))
+    period_per_lc: List[period_distribution.MultiBandPeriod] = []
+    if plot_period:
+        if period_transform is None:
+            period_transform = period_distribution.IndependentLs()
+        period_per_lc = list(map(period_transform.transform, lcs))
 
     fig, ax = plt.subplots(
         nrows=numbands,
-        ncols=(2 if plot_frequency else 1),
+        ncols=(2 if plot_period else 1),
         sharex='col',
         # sharey='row',
-        figsize=((12 if plot_frequency else 8), 6),
+        figsize=((12 if plot_period else 8), 6),
         squeeze=False
     )
 
@@ -109,8 +109,8 @@ def plot_lcs(
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
 
-        for multi_band_frequency in frequency_per_lc:
-            ax[i, 1].plot(multi_band_frequency.frequency, multi_band_frequency[b])
+        for multi_band_period in period_per_lc:
+            ax[i, 1].plot(multi_band_period.period, multi_band_period[b])
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return fig

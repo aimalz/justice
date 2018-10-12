@@ -11,63 +11,65 @@ import astropy.stats
 from gatspy import periodic
 
 
-class MultiBandFrequency(collections.OrderedDict):
-    __slots__ = ("frequency", )
+class MultiBandPeriod(collections.OrderedDict):
+    __slots__ = ("period", )
 
-    def __init__(self, *, frequency, band_to_power):
+    def __init__(self, *, period, band_to_power):
         super().__init__(band_to_power)
         for value in self.values():
             assert isinstance(value, np.ndarray)
             assert len(value.shape) == 1, "Expected 1D shape per band."
-        self.frequency = frequency
+        self.period = period
 
     def plot(self, band_name):
         import matplotlib.pyplot as plt
-        plt.plot(self.frequency, self[band_name])
-
-    def freq_max(self, band_name):
-        return self.frequency[np.nanargmax(self[band_name])]
+        plt.plot(self.period, self[band_name])
+        plt.xlabel("Period")
+        plt.ylabel("Power")
 
     def period_max(self, band_name):
-        return 1.0 / self.freq_max(band_name)
+        return self.period[np.nanargmax(self[band_name])]
+
+    def frequency_max(self, band_name):
+        return 1.0 / self.period_max(band_name)
 
 
 class LsTransformBase(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, frequency: typing.Union[str, np.ndarray] = 'default') -> None:
-        if frequency == 'default':
-            self.frequency = 1.0 / np.linspace(100, 2, 100)
+    def __init__(self, period: typing.Union[str, np.ndarray] = 'default') -> None:
+        if period == 'default':
+            self.period = 1.0 / np.linspace(100, 2, 100)
         else:
-            assert isinstance(frequency, np.ndarray)
-            self.frequency = frequency
+            assert isinstance(period, np.ndarray)
+            self.period = period
 
     @abc.abstractmethod
-    def transform(self, lc: lightcurve._LC) -> MultiBandFrequency:
+    def transform(self, lc: lightcurve._LC) -> MultiBandPeriod:
         raise NotImplementedError()
 
 
-def _compute_ls(band, frequency):
+def _compute_ls(band, period):
     return astropy.stats.LombScargle(
-        band.time, band.flux, band.flux_err).power(frequency)
+        band.time, band.flux, band.flux_err).power(period)
 
 
 class IndependentLs(LsTransformBase):
-    def transform(self, lc: lightcurve._LC) -> MultiBandFrequency:
+    def transform(self, lc: lightcurve._LC) -> MultiBandPeriod:
         band_to_power = {
-            band_name: _compute_ls(band, self.frequency)
+            band_name: _compute_ls(band, self.period)
             for band_name, band in lc.bands.items()
         }
-        return MultiBandFrequency(frequency=self.frequency, band_to_power=band_to_power)
+        return MultiBandPeriod(period=self.period, band_to_power=band_to_power)
 
 
 class MultiBandLs(LsTransformBase):
     """Runs gatspy multi-band LS.
 
-    However, this currently seems to give the same frequency distribution for all bands.
+    However, this currently seems to give the same period distribution for all bands.
     """
 
-    def transform(self, lc: lightcurve._LC) -> MultiBandFrequency:
+    def transform(self, lc: lightcurve._LC) -> MultiBandPeriod:
         def _concat_for_all_bands(key_fcn):
             return np.concatenate([
                 key_fcn(name, band) for name, band in lc.bands.items()
@@ -82,9 +84,9 @@ class MultiBandLs(LsTransformBase):
 
         model = periodic.LombScargleMultiband()
         model.fit(times, fluxes, flux_errs, bands)
-        power = model.periodogram(1.0 / self.frequency)
-        return MultiBandFrequency(
-            frequency=self.frequency,
+        power = model.periodogram(self.period)
+        return MultiBandPeriod(
+            period=self.period,
             band_to_power={name: power
                            for name in lc.bands.keys()}
         )
