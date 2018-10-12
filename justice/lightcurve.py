@@ -2,7 +2,7 @@ import abc
 import collections
 import math
 import typing
-
+from tensorflow.contrib.framework import nest
 import sqlite3
 import numpy as np
 import scipy.stats as sps
@@ -182,18 +182,17 @@ class _LC:
         )
 
     def get_xform(self, vals: np.ndarray = None) -> xform.Xform:
+        generic_vals = [0., {b: 0. for b in self.expected_bands}, 1., {b: 1. for b in self.expected_bands}, 0.]
         if vals is None:
-            vals = [0., 0., 1., 1.]
-            for _ in self.expected_bands:
-                vals.append(1.)
-        tx = vals[0]
-        ty = vals[1]
-        dx = vals[2]
-        dy = vals[3]
-        bc: collections.OrderedDict[str, float] = collections.OrderedDict()
-        for b, val in zip(self.expected_bands, vals[4:]):
-            bc[b] = val
-        return xform.Xform(tx, ty, dx, dy, bc)
+            vals = nest.flatten(generic_vals)
+            # for _ in self.expected_bands:
+            #     vals.append(1.)
+
+        [tx, ty, dx, dy, rs] = nest.pack_sequence_as(generic_vals, list(vals))
+        # bc: collections.OrderedDict[str, float] = collections.OrderedDict()
+        # for b, val in zip(self.expected_bands, vals[4:]):
+        #     bc[b] = val
+        return xform.Xform(tx, ty, dx, dy, rs)
 
     def connect_the_dots(self) -> float:
         """Returns the sum of the arc length of all bands.
