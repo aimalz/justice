@@ -15,7 +15,9 @@ def test_connect_the_dots():
 def test_arclen():
     glc = sim.TestLC.make_hard_gauss()
 
-    aff = glc.get_xform([50., {'a': 1., 'b': 1.}, 1.5, {'a': 1., 'b': 1.}, 0.])
+    values = np.array(nest.flatten([50., {'a': 1., 'b': 1.}, 1.5, {'a': 1., 'b': 1.}, 0.]))
+
+    aff = glc.get_xform(values)
     glc2 = xform.transform(glc, aff)
 
     aff2 = summ.opt_arclen(glc, glc2, vb=False, options={'maxiter': 10})
