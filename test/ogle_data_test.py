@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os.path
 import pathlib
+import pytest
 
 from justice.datasets import ogle_data_builder, ogle_data
 
