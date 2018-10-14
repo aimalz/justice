@@ -1,69 +1,64 @@
-import typing
-from collections import namedtuple
-
 import numpy as np
-from tensorflow.contrib.framework import nest
-
-if typing.TYPE_CHECKING:
-    from justice import lightcurve
+from justice import lightcurve
 
 
-class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'rs'))):
+class BandNameMapper:
     """
-    translation, dilation in x, y, plus band coupling
-
+    Our observation space is indexed by discrete BandNames
+    but our model space is indexed by continuous pseudo-wavelength (pwav)
+    An instance of `BandNameMapper` represents the injection of BandNames into points
+    on the pwav space. Here, the mapping is represented as a sorted list of wavelengths
+    so that BandName[i] -> target_wavelengths[i]
+    The numbers you supply here must already have redshift incorporated
     """
-    __slots__ = ()
 
-    def __new__(cls, tx, ty, dx, dy, rs):
-        # if kwargs or not args:  # Using kwargs is discouraged as of right now
-        #     assert not args
-            # kwargs.setdefault("tx", 0.0)
-            # kwargs.setdefault("ty", {b: 0.0})
-            # kwargs.setdefault("dx", 1.0)
-            # kwargs.setdefault("dy", {b: 1.0})
-            # kwargs.setdefault("rs", 0.0)
-            # noinspection PyTypeChecker
-        #     return super(cls, Xform).__new__(cls, **kwargs)
-        # else:
-        #     # noinspection PyTypeChecker
-        return super(cls, Xform).__new__(cls, tx, ty, dx, dy, rs)
+    def __init__(self, target_wavelengths):
+        for i in range(len(target_wavelengths) - 1):
+            assert target_wavelengths[i] < target_wavelengths[i + 1]
+        self.wavelengths = target_wavelengths
 
-    def as_array(self):
-        return np.array(nest.flatten(self), dtype=np.float64)
-
-    def transform_band(self, bd, ty, dy):
-        # currently ignoring rs
-        # check that error really does behave this way
-        new_x = self.dx * (bd.time + self.tx)
-        new_y = dy * (bd.flux + ty)
-        new_yerr = np.sqrt(dy) * bd.flux_err
-        return bd.__class__(new_x, new_y, new_yerr)
-
-    def transform(self, lc):
-        bands = {b: self.transform_band(lc.bands[b], self.ty[b], self.dy[b]) for b in lc.bands}
-        return lc.__class__(**bands)
+    @property
+    def nbands(self):
+        return len(self.wavelengths)
 
 
-class PerBandTransforms(dict):
-    # noinspection PyProtectedMember
-    def transform(self, lc: 'lightcurve._LC'):
-        if frozenset(self.keys()) != frozenset(lc.expected_bands):
-            raise ValueError(
-                "Expected bands {} but got {}".format(self.keys(), lc.expected_bands)
-            )
+class BandDataXform:
+    def __init__(self, time_fn, flux_fn, flux_err_fn):
+        self._time_fn = time_fn
+        self._flux_fn = flux_fn
+        self._flux_err_fn = flux_err_fn
 
-        return lc.__class__(
-            **{
-                b: self[b].transform_band(band_data, 1.0)
-                for b, band_data in lc.bands.items()
-            }
+    def apply(self, bd) -> lightcurve.BandData:
+        return lightcurve.BandData(
+            self._time_fn(bd.time),
+            self._flux_fn(bd.flux),
+            self._flux_err_fn(bd.flux_err),
+            bd.detected,
         )
 
 
-def make_xform(lst):
-    return Xform(lst[0], lst[1], lst[2], lst[3], lst[4])
+class LinearBandDataXform(BandDataXform):
+    def __init__(self, translate_time, translate_flux, dilate_time, dilate_flux):
+        self._translate_time = translate_time
+        self._translate_flux = translate_flux
+        self._dilate_time = dilate_time
+        self._dilate_flux = dilate_flux
+
+    def apply(self, bd) -> lightcurve.BandData:
+        new_x = self._dilate_time * (bd.time + self._translate_time)
+        new_y = self._dilate_flux * (bd.flux + self._translate_flux)
+        # TODO: check that error really does behave this way
+        new_yerr = np.sqrt(self._dilate_flux) * bd.flux_err
+        return bd.__class__(new_x, new_y, new_yerr)
 
 
-def transform(lc, xform):
-    return xform.transform(lc)
+class LCXform:
+    # TODO
+    def apply(self, lc) -> lightcurve._LC:
+        pass
+
+
+class LC2DXform:
+    # TODO
+    def apply(self, lc2d) -> lightcurve.LC2D:
+        pass

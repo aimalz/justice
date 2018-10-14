@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from justice import xform, simulate
+from tensorflow.contrib.framework import nest
 
 @pytest.mark.skip()
 def test_defaulting():

@@ -34,7 +34,7 @@ def opt_arclen(
     method='Nelder-Mead',
     options=None,
     vb=True,
-) -> xform.Xform:
+) -> xform.LCXform:
     """
     Minimizes the arclength between two lightcurves after merging
 
@@ -195,7 +195,7 @@ def opt_gp(
 
     if method != 'Nelder-Mead':
         # don't know if this way of handling constraints actually works -- untested!
-        def pos_dil(xf: xform.Xform):
+        def pos_dil(xf: xform.LCXform):
             return min(xf.dx, xf.dy)
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
