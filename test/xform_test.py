@@ -9,6 +9,7 @@ import pytest
 
 from justice import xform, simulate
 
+
 @pytest.mark.skip()
 def test_defaulting():
     tf = xform.Xform(tx=3.0)
@@ -20,14 +21,29 @@ def test_defaulting():
 
 def test_to_and_from_array():
     tf = xform.Xform(
-        tx=0.1, ty={'a':0.2, 'b':0.2}, dx=1.0, dy={'a':2.0, 'b':2.0}, rs=.1)
+        tx=0.1, ty={
+            'a': 0.2,
+            'b': 0.2
+        }, dx=1.0, dy={
+            'a': 2.0,
+            'b': 2.0
+        }, rs=.1
+    )
     params = np.array(nest.flatten(tf))
     tf2 = xform.make_xform(params)
     assert tf == tf2
 
 
 def test_transform():
-    tf = xform.Xform(tx=-3215, ty={'a':0.2, 'b':0.2}, dx=10.0, dy={'a':2.0, 'b':2.0}, rs=.1)
+    tf = xform.Xform(
+        tx=-3215, ty={
+            'a': 0.2,
+            'b': 0.2
+        }, dx=10.0, dy={
+            'a': 2.0,
+            'b': 2.0
+        }, rs=.1
+    )
     lca = simulate.TestLC.make_super_easy(time=np.array([3215, 3217]))
     lc = tf.transform(lca)
     assert lc.bands['b'].time[0] == 0.0

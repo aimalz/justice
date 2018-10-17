@@ -16,14 +16,15 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'rs'))):
     __slots__ = ()
 
     def __new__(cls, tx, ty, dx, dy, rs):
-        # if kwargs or not args:  # Using kwargs is discouraged as of right now
+        # if kwargs or not args:
+        # Using kwargs is discouraged as of right now
         #     assert not args
-            # kwargs.setdefault("tx", 0.0)
-            # kwargs.setdefault("ty", {b: 0.0})
-            # kwargs.setdefault("dx", 1.0)
-            # kwargs.setdefault("dy", {b: 1.0})
-            # kwargs.setdefault("rs", 0.0)
-            # noinspection PyTypeChecker
+        # kwargs.setdefault("tx", 0.0)
+        # kwargs.setdefault("ty", {b: 0.0})
+        # kwargs.setdefault("dx", 1.0)
+        # kwargs.setdefault("dy", {b: 1.0})
+        # kwargs.setdefault("rs", 0.0)
+        # noinspection PyTypeChecker
         #     return super(cls, Xform).__new__(cls, **kwargs)
         # else:
         #     # noinspection PyTypeChecker
@@ -38,10 +39,13 @@ class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'rs'))):
         new_x = self.dx * (bd.time + self.tx)
         new_y = dy * (bd.flux + ty)
         new_yerr = np.sqrt(dy) * bd.flux_err
-        return bd.__class__(new_x, new_y, new_yerr)
+        return bd.__class__(new_x, new_y, new_yerr, bd.detected)
 
     def transform(self, lc):
-        bands = {b: self.transform_band(lc.bands[b], self.ty[b], self.dy[b]) for b in lc.bands}
+        bands = {
+            b: self.transform_band(lc.bands[b], self.ty[b], self.dy[b])
+            for b in lc.bands
+        }
         return lc.__class__(**bands)
 
 

@@ -15,7 +15,15 @@ def test_connect_the_dots():
 def test_arclen():
     glc = sim.TestLC.make_hard_gauss()
 
-    values = np.array(nest.flatten([50., {'a': 1., 'b': 1.}, 1.5, {'a': 1., 'b': 1.}, 0.]))
+    values = np.array(
+        nest.flatten([50., {
+            'a': 1.,
+            'b': 1.
+        }, 1.5, {
+            'a': 1.,
+            'b': 1.
+        }, 0.])
+    )
 
     aff = glc.get_xform(values)
     glc2 = xform.transform(glc, aff)
