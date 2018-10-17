@@ -57,7 +57,7 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
     return fig
 
 
-def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
+def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default', title=None):
     """Plot multiple (or single) lightcurves at once
 
     :param lcs: list of lightcurves
@@ -86,6 +86,8 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
         squeeze=False
     )
 
+    fig.suptitle(title)
+
     for i, b in enumerate(bands):
         for lci in lcs:
             ax[i, 0].errorbar(
@@ -95,7 +97,7 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
                 linestyle='None',
                 marker='.'
             )
-        ax[i, 0].set_ylabel('flux')
+        #ax[i, 0].set_ylabel('flux')
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
 
@@ -105,7 +107,7 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
                     lc.bands[b].time, lc.bands[b].flux, lc.bands[b].flux_err
                 ).power(frequency)
                 ax[i, 1].plot(frequency, power)
-        plt.ylabel(b).set_rotation(0)
+        #plt.ylabel(b).set_rotation(0)
     plt.xlabel('time')
     plt.subplots_adjust(hspace=0.4)
     plt.tight_layout()
