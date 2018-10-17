@@ -169,17 +169,3 @@ class LC2D:
         self.invars = numpy.array([pwav, time])
         self.outvars = numpy.array([flux, flux_err])
         self.detected = detected
-
-    @classmethod
-    def from_LC(cls, lc, bnm):
-        assert lc.nbands == bnm.nbands
-        pwav = np.concat([
-            np.ones_like(lc.bands[b].time) * bnm.wavelengths[i]
-            for i, b in enumerate(lc.expected_bands)
-        ])
-        time = np.concat([band.time for name, band in lc.bands.items])
-
-        flux = np.concat([band.flux for name, band in lc.bands.items])
-        flux_err = np.concat([band.flux_err for name, band in lc.bands.items])
-        detected = np.concat([band.detected for name, band in lc.bands.items])
-        return cls(pwav, time, flux, flux_err, detected)
