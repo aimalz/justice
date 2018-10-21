@@ -6,7 +6,7 @@ from __future__ import print_function
 
 
 from justice import xform, simulate
-from test import lightcurve_test
+import lightcurve_test
 
 
 def test_linear_band_data_xform():
