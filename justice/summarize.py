@@ -33,7 +33,7 @@ def opt_arclen(
     constraints=None,
     method='Nelder-Mead',
     options=None,
-    vb=True,
+    vb=False,
 ) -> xform.Xform:
     """
     Minimizes the arclength between two lightcurves after merging
@@ -63,6 +63,19 @@ def opt_arclen(
     else:
         constraints = None
 
+    def _preprocess(lca, lcb):
+        ty = {}
+        dy = {}  # We may want to line up xs as well
+        lcs = []
+        for lc in [lca, lcb]:
+            for b in 'ugrizY':
+                ty[b] = np.min(lc.bands[b].flux)
+                dy[b] = 1. / (np.max(lc.bands[b].flux) - ty[b])
+            lcs.append(xform.Xform(0., ty, 1., dy, 0.).transform(lc))
+        return lcs[0], lcs[1]
+
+    lca, lcb = _preprocess(lca, lcb)
+
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
         lca_xform = lca.get_xform(vals=vals)
@@ -87,7 +100,6 @@ def fit_gp(lctrain, kernel=None):
     gpy_data = lctrain.to_arrays()
     gp = GPy.models.gp_regression.GPRegression(gpy_data[0], gpy_data[1], normalizer=True)
     gp.optimize()
-
     return gp.log_likelihood()
 
 
@@ -143,7 +155,8 @@ class OverlapCostComponent(object):
         if overlap <= 0:
             return self.cost_outside
         else:
-            overlap_percent = (2 * overlap) / ((max_lca - min_lca) + (max_lcb - min_lcb))
+            overlap_percent = (2 * overlap) / \
+                ((max_lca - min_lca) + (max_lcb - min_lcb))
             assert 0.0 <= overlap_percent <= 1.0
             return np.interp(
                 x=overlap_percent, xp=self.cost_base, fp=self.cost_percentiles

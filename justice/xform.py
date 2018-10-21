@@ -8,39 +8,44 @@ if typing.TYPE_CHECKING:
     from justice import lightcurve
 
 
-class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'bc'))):
+class Xform(namedtuple('Xform', ('tx', 'ty', 'dx', 'dy', 'rs'))):
     """
     translation, dilation in x, y, plus band coupling
 
     """
     __slots__ = ()
 
-    def __new__(cls, *args, **kwargs):
-        if kwargs or not args:  # Using kwargs is discouraged as of right now
-            assert not args
-            kwargs.setdefault("tx", 0.0)
-            kwargs.setdefault("ty", 0.0)
-            kwargs.setdefault("dx", 1.0)
-            kwargs.setdefault("dy", 1.0)
-            kwargs.setdefault("bc", {'b': 0.0})
-            # noinspection PyTypeChecker
-            return super(cls, Xform).__new__(cls, **kwargs)
-        else:
-            # noinspection PyTypeChecker
-            return super(cls, Xform).__new__(cls, *args)
+    def __new__(cls, tx, ty, dx, dy, rs):
+        # if kwargs or not args:
+        # Using kwargs is discouraged as of right now
+        #     assert not args
+        # kwargs.setdefault("tx", 0.0)
+        # kwargs.setdefault("ty", {b: 0.0})
+        # kwargs.setdefault("dx", 1.0)
+        # kwargs.setdefault("dy", {b: 1.0})
+        # kwargs.setdefault("rs", 0.0)
+        # noinspection PyTypeChecker
+        #     return super(cls, Xform).__new__(cls, **kwargs)
+        # else:
+        #     # noinspection PyTypeChecker
+        return super(cls, Xform).__new__(cls, tx, ty, dx, dy, rs)
 
     def as_array(self):
         return np.array(nest.flatten(self), dtype=np.float64)
 
-    def transform_band(self, bd, bc):
+    def transform_band(self, bd, ty, dy):
+        # currently ignoring rs
         # check that error really does behave this way
         new_x = self.dx * (bd.time + self.tx)
-        new_y = self.dy * (bd.flux + self.ty)
-        new_yerr = np.sqrt(self.dy) * bd.flux_err
-        return bd.__class__(new_x, new_y, new_yerr)
+        new_y = dy * (bd.flux + ty)
+        new_yerr = np.sqrt(dy) * bd.flux_err
+        return bd.__class__(new_x, new_y, new_yerr, bd.detected)
 
     def transform(self, lc):
-        bands = {b: self.transform_band(lc.bands[b], self.bc[b]) for b in lc.bands}
+        bands = {
+            b: self.transform_band(lc.bands[b], self.ty[b], self.dy[b])
+            for b in lc.bands
+        }
         return lc.__class__(**bands)
 
 

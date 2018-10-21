@@ -5,10 +5,12 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+import pytest
 
 from justice.datasets import supernova_data
 
 
+@pytest.mark.skip()
 def test_random_id_functions(sn_dataset):
     """
     :type sn_dataset: justice.supernova_data.SNDataset
@@ -18,6 +20,7 @@ def test_random_id_functions(sn_dataset):
     assert random_ids == frozenset([92234, 197655])
 
 
+@pytest.mark.skip()
 def test_lc_dict_for_id(sn_dataset):
     """
     :type sn_dataset: justice.supernova_data.SNDataset
@@ -32,6 +35,7 @@ def test_lc_dict_for_id(sn_dataset):
         assert num_columns == 3
 
 
+@pytest.mark.skip()
 def test_format_dense_multi_band_lc(sn_dataset):
     dct = sn_dataset.lc_dict_for_id(92234)
     lc = supernova_data.format_dense_multi_band_from_lc_dict(dct)

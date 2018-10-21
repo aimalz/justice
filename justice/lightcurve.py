@@ -2,7 +2,7 @@ import abc
 import collections
 import math
 import typing
-
+from tensorflow.contrib.framework import nest
 import sqlite3
 import numpy as np
 import scipy.stats as sps
@@ -55,10 +55,13 @@ class BandData(object):
         times = np.concatenate((self.time, other.time))
         fluxes = np.concatenate((self.flux, other.flux))
         flux_errs = np.concatenate((self.flux_err, other.flux_err))
+        detecteds = np.concatenate((self.detected, other.detected))
 
         # tried kind='mergesort', but it wasn't any faster with 1e7 points
         ordinals = np.argsort(times)
-        return BandData(times[ordinals], fluxes[ordinals], flux_errs[ordinals])
+        return BandData(
+            times[ordinals], fluxes[ordinals], flux_errs[ordinals], detecteds[ordinals]
+        )
 
     @classmethod
     def from_cadence_shape_and_errfracs(cls, cadence, shape, errfracs):
@@ -76,8 +79,10 @@ class BandData(object):
         :return: Arc length measurement.
         """
         # ignores errorbars
-        time_diffs = self.time[1:] - self.time[:-1]
-        flux_diffs = self.flux[1:] - self.flux[:-1]
+        dettimes = self.time[self.detected == 1]
+        detfluxes = self.flux[self.detected == 1]
+        time_diffs = dettimes[1:] - dettimes[:-1]
+        flux_diffs = detfluxes[1:] - detfluxes[:-1]
         return float(np.sum(np.sqrt(time_diffs**2 + flux_diffs**2)))
 
     @classmethod
@@ -182,18 +187,21 @@ class _LC:
         )
 
     def get_xform(self, vals: np.ndarray = None) -> xform.Xform:
+        generic_vals = [
+            0., {b: 0.
+                 for b in self.expected_bands}, 1., {b: 1.
+                                                     for b in self.expected_bands}, 0.
+        ]
         if vals is None:
-            vals = [0., 0., 1., 1.]
-            for _ in self.expected_bands:
-                vals.append(1.)
-        tx = vals[0]
-        ty = vals[1]
-        dx = vals[2]
-        dy = vals[3]
-        bc: collections.OrderedDict[str, float] = collections.OrderedDict()
-        for b, val in zip(self.expected_bands, vals[4:]):
-            bc[b] = val
-        return xform.Xform(tx, ty, dx, dy, bc)
+            vals = nest.flatten(generic_vals)
+            # for _ in self.expected_bands:
+            #     vals.append(1.)
+
+        [tx, ty, dx, dy, rs] = nest.pack_sequence_as(generic_vals, list(vals))
+        # bc: collections.OrderedDict[str, float] = collections.OrderedDict()
+        # for b, val in zip(self.expected_bands, vals[4:]):
+        #     bc[b] = val
+        return xform.Xform(tx, ty, dx, dy, rs)
 
     def connect_the_dots(self) -> float:
         """Returns the sum of the arc length of all bands.
