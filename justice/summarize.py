@@ -15,18 +15,40 @@ def lineup(lca, lcb):
     pass
 
 
-def generate_ivals(lc: lightcurve._LC) -> np.ndarray:
-    """
-    Generate starting values for optimization
+def opt_alignment(lca: lightcurve._LC,
+                  lcb: lightcurve._LC,
+                  ivals=None,
+                  constraints=None,
+                  method='Nelder-Mead',
+                  options=None,
+                  vb=True,
+                  scoretype=None,
+                  **kwargs,
+                  ) -> xform.LCXform:
+    if scoretype == 'arclen':
+        return _opt_arclen(lca,
+                           lcb,
+                           ivals=ivals,
+                           constraints=constraints,
+                           method=method,
+                           options=options,
+                           vb=vb,
+                           **kwargs)
+    elif scoretype == 'gp':
+        return _opt_gp(lca,
+                       lcb,
+                       ivals=ivals,
+                       constraints=constraints,
+                       method=method,
+                       options=options,
+                       vb=vb,
+                       **kwargs,
+                       )
+    else:
+        raise ValueError('Unknown scoretype: ' + scoretype)
 
-    :param lc: Starting lightcurve
-    :return: flattened list of xform parameters
-    """
-    numbands = lc.nbands
-    return np.array(nest.flatten(lc.get_xform()))
 
-
-def opt_arclen(
+def _opt_arclen(
     lca: lightcurve._LC,
     lcb: lightcurve._LC,
     ivals=None,
@@ -34,6 +56,7 @@ def opt_arclen(
     method='Nelder-Mead',
     options=None,
     vb=True,
+    **kwargs,
 ) -> xform.LCXform:
     """
     Minimizes the arclength between two lightcurves after merging
@@ -52,12 +75,12 @@ def opt_arclen(
     if options is None:
         options = {'maxiter': 10000}
     if ivals is None:
-        ivals = generate_ivals(lca)
+        ivals = xform.LinearBandDataXform.ivals()
 
     if method != 'Nelder-Mead':
 
-        def pos_dil(xf: xform.Xform):
-            return min(xf.dx, xf.dy)
+        def pos_dil(xf: xform.LinearBandDataXform):
+            return min(xf._dilate_time, xf._dilate_flux)
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
@@ -65,8 +88,9 @@ def opt_arclen(
 
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
-        lca_xform = lca.get_xform(vals=vals)
-        lc = xform.transform(lcb, lca_xform)
+        bd_xform = xform.LinearBandDataXform(*vals)
+        lca_xform = xform.SimultaneousLCXform(bd_xform)
+        lc = lca_xform.apply(lcb)
         new_lc = lca + lc
         length = new_lc.connect_the_dots()
         return length
@@ -79,7 +103,7 @@ def opt_arclen(
     )
     if vb:
         print(res)
-    res_xform = lca.get_xform(res.x)
+    res_xform = xform.SimultaneousLCXform(xform.LinearBandDataXform(*res.x))
     return res_xform
 
 
@@ -150,7 +174,7 @@ class OverlapCostComponent(object):
             )
 
 
-def opt_gp(
+def _opt_gp(
     lca,
     lcb,
     ivals=None,
@@ -195,8 +219,8 @@ def opt_gp(
 
     if method != 'Nelder-Mead':
         # don't know if this way of handling constraints actually works -- untested!
-        def pos_dil(xf: xform.LCXform):
-            return min(xf.dx, xf.dy)
+        def pos_dil(xf: xform.LinearBandDataXform):
+            return min(xf._dilate_time, xf._dilate_flux)
 
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
@@ -205,8 +229,9 @@ def opt_gp(
     def _helper(vals):
         if component_sensitivity is not None:
             vals = vals * component_sensitivity
-        lca_xform = lca.get_xform(vals=vals)
-        lc = xform.transform(lcb, lca_xform)
+        bd_xform = xform.LinearBandDataXform(*vals)
+        lca_xform = xform.SimultaneousLCXform(bd_xform)
+        lc = lca_xform.apply(lcb)
         new_lc = lca + lc
         fin_like = fit_gp(new_lc)
 
@@ -226,5 +251,5 @@ def opt_gp(
     if vb:
         print(res)
 
-    resxform = lca.get_xform(res.x)
+    resxform = xform.SimultaneousLCXform(xform.LinearBandDataXform(*res.x))
     return resxform

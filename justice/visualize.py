@@ -125,7 +125,7 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
     :return: figure
     """
     fig = plt.figure()
-    lcc = xforma.transform(lcb)
+    lcc = xforma.apply(lcb)
     lcd = lca + lcc
     numbands = lca.nbands
     for i, b in enumerate(lca.bands):

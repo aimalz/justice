@@ -1,6 +1,7 @@
 import numpy as np
 from justice import lightcurve
 import abc
+import collections
 
 
 class BandNameMapper:
@@ -19,9 +20,10 @@ class BandNameMapper:
 
     def make_lc2d(self, lc: lightcurve._LC) -> lightcurve.LC2D:
         assert frozenset(lc.expected_bands) == frozenset(self.pwavs.keys())
-        for i, e in enumerate(lc.expected_bands)[:-1]:
+        for i in range(len(lc.expected_bands) - 1):
+            this_e = lc.expected_bands[i]
             next_e = lc.expected_bands[i + 1]
-            assert self.pwavs[e] < self.pwavs[next_e], 'Bands must be mapped to increasing pwavs'
+            assert self.pwavs[this_e] < self.pwavs[next_e], 'Bands must be mapped to increasing pwavs'
         pwav = np.concat([
             np.ones_like(lc.bands[b].time) * self.pwavs[b]
             for b in lc.expected_bands
@@ -48,10 +50,6 @@ class BandDataXform:
             bd.detected,
         )
 
-    @classmethod
-    def identity(cls):
-        return cls(lambda x: x, lambda x: x, lambda x: x)
-
 
 class LinearBandDataXform(BandDataXform):
     def __init__(self, translate_time, translate_flux, dilate_time, dilate_flux):
@@ -68,8 +66,8 @@ class LinearBandDataXform(BandDataXform):
         return lightcurve.BandData(new_x, new_y, new_yerr)
 
     @classmethod
-    def identity(cls):
-        return cls(0, 0, 1, 1)
+    def ivals(cls):
+        return np.array([0, 0, 1, 1])
 
 
 class LCXform:
@@ -88,15 +86,22 @@ class IndependentLCXform(LCXform):
 
     def apply(self, lc) -> lightcurve._LC:
         # want to allow easy creation of this class with just one BandDataXform
-        assert self._band_xforms.keys().issubset(lc.bands.keys())
+        assert set(self._band_xforms.keys()).issubset(lc.bands.keys())
         new_bands = {}
         for name in lc.bands:
-            new_bands[name] = self._band_xforms(lc.bands[name])
+            new_bands[name] = self._band_xforms[name].apply(lc.bands[name])
         return lc.__class__(**new_bands)
 
-    @classmethod
-    def identity(cls):
-        return cls()
+
+class SimultaneousLCXform(LCXform):
+    def __init__(self, band_xform):
+        self._band_xform = band_xform
+
+    def apply(self, lc) -> lightcurve._LC:
+        new_bands = {}
+        for name in lc.bands:
+            new_bands[name] = self._band_xform.apply(lc.bands[name])
+        return lc.__class__(**new_bands)
 
 
 class LC2DXform:

@@ -81,7 +81,7 @@ class PlasticcDatasetLC(lightcurve._LC):
         'hostgal_photoz', 'hostgal_photoz_err', 'distmod', 'mwebv', 'target'
     ]
 
-    expected_bands = list('ugrizY')
+    expected_bands = list('ugrizy')
 
     @classmethod
     def _get_band_from_raw(cls, conn, dataset, obj_id, band_id):
