@@ -16,9 +16,9 @@ class MultiBandPeriod(collections.OrderedDict):
 
     def __init__(self, *, period, band_to_power):
         super().__init__(band_to_power)
-        for value in self.values():
-            assert isinstance(value, np.ndarray)
-            assert len(value.shape) == 1, "Expected 1D shape per band."
+        # for value in self.values():
+        #     assert isinstance(value, np.ndarray)
+        #     assert len(value.shape) == 1, "Expected 1D shape per band."
         self.period = period
 
     def plot(self, band_name):
@@ -39,7 +39,7 @@ class LsTransformBase(object):
 
     def __init__(self, period: typing.Union[str, np.ndarray] = 'default') -> None:
         if period == 'default':
-            self.period = 1.0 / np.linspace(100, 2, 100)
+            self.period = 1. / np.linspace(0.1, 1., 100)
         else:
             assert isinstance(period, np.ndarray)
             self.period = period
@@ -51,7 +51,7 @@ class LsTransformBase(object):
 
 def _compute_ls(band, period):
     return astropy.stats.LombScargle(
-        band.time, band.flux, band.flux_err).power(period)
+        band.time, band.flux, band.flux_err).power(period)# replace with autopower soon
 
 
 class IndependentLs(LsTransformBase):
@@ -70,6 +70,7 @@ class MultiBandLs(LsTransformBase):
     """
 
     def transform(self, lc: lightcurve._LC) -> MultiBandPeriod:
+
         def _concat_for_all_bands(key_fcn):
             return np.concatenate([
                 key_fcn(name, band) for name, band in lc.bands.items()

@@ -123,6 +123,7 @@ def plot_lcs(
         #ax[i, 0].set_ylabel('flux')
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
+            ax[i, 1].set_xlabel('period')
 
 # <<<<<<< HEAD
     #     if plot_period:
@@ -137,7 +138,9 @@ def plot_lcs(
     # plt.tight_layout()
 # =======
         for multi_band_period in period_per_lc:
-            ax[i, 1].plot(multi_band_period.period, multi_band_period[b])
+            ax[i, 1].plot(1. / multi_band_period.period, multi_band_period[b])
+
+            # ax[i, 1].semilogx()
 # >>>>>>> 064323b615998ec644fa7b7160e7033c68444365
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
