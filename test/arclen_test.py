@@ -16,5 +16,5 @@ def test_arclen():
 
     glc2 = aff.apply(glc)
 
-    aff2 = summ.opt_alignment(glc, glc2, vb=False, options={'maxiter': 10}, scoretype='arclen')
+    aff2 = summ.opt_alignment(glc, glc2, vb=False, options={'maxiter': 10})
     del aff2  # unused
