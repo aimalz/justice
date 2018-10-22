@@ -5,44 +5,30 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-import csv
-import json
 import os.path
 import shutil
-import subprocess
 
 import bcolz
+import pandas as pd
+import numpy as np
 
 from justice import path_util
 
 _root_dir = path_util.data_dir / 'plasticc_bcolz'
 
-_col_to_data_type = {
-    'object_id': 'i4',
-    'mjd': 'f4',
-    'passband': 'i4',
-    'flux': 'f4',
-    'flux_err': 'f4',
-    'detected': 'i1',
-    'ra': 'f4',
-    'decl': 'f4',
-    'gal_l': 'f4',
-    'gal_b': 'f4',
-    'ddf': 'i4',
-    'hostgal_specz': 'f4',
-    'hostgal_photoz': 'f4',
-    'hostgal_photoz_err': 'f4',
-    'distmod': 'f4',
-    'mwebv': 'f4',
-    'target': 'i4',
-}
-_col_to_converter = {
-    key: (
-        int if value.startswith("i") else
-        (float if value.startswith("f") else NotImplemented)
-    )
-    for key, value in _col_to_data_type.items()
-}
+
+def get_tree_size(path):
+    """Return total size of files in given path and subdirs.
+
+    Copied from https://www.python.org/dev/peps/pep-0471/ (public domain).
+    """
+    total = 0
+    for entry in os.scandir(path):
+        if entry.is_dir(follow_symlinks=False):
+            total += get_tree_size(entry.path)
+        else:
+            total += entry.stat(follow_symlinks=False).st_size
+    return total
 
 
 class BcolzDataset(object):
@@ -62,46 +48,52 @@ class BcolzDataset(object):
             assert "plasticc" in str(self.bcolz_dir)  # rmtree safety
             shutil.rmtree(str(self.bcolz_dir))
 
-    @property
-    def column_names_json(self):
-        return self.bcolz_dir / "column_names.json"
 
-    def write_column_names(self, column_names):
-        assert isinstance(column_names, list)
-        with open(self.column_names_json, 'w') as f:
-            json.dump(column_names, f)
+def _safe_cast(name, series: pd.Series):
+    if series.dtype == np.float64:
+        assert series.abs().max() < 1e37, "Max too close to float32 max."
+        return series.astype(np.float32)
+    elif series.dtype == np.int64:
+        if name == "detected":
+            assert series.abs().max() < 128, "Max too close to int8 max."
+            return series.astype(np.int8)
+        else:
+            assert series.abs().max() < 2e9, "Max too close to int32 max."
+            return series.astype(np.int32)
+    else:
+        raise TypeError(f"Unexpected non-int/float column type {series.dtype}")
 
-    def read_column_names(self):
-        with open(self.column_names_json, 'r') as f:
-            return json.load(f)
+
+def _convert_df_to_32_bit(df):
+    for col in df.columns.tolist():
+        df[col] = _safe_cast(col, df[col])
 
 
-def create_dataset(*, csv_reader, out_dir, num_rows):
-    first_row = next(csv_reader)
-    types = ",".join(_col_to_data_type[col] for col in first_row.keys())
-    converters = [_col_to_converter[col] for col in first_row.keys()]
+def create_dataset(*, source_file, out_dir):
+    data_frame_chunks = pd.read_csv(source_file, chunksize=1_000_000)
+    first_chunk: pd.DataFrame = next(data_frame_chunks)
+    _convert_df_to_32_bit(first_chunk)
+    column_names = first_chunk.columns.tolist()
 
-    def _data_gen():
-        num_read = 0
-        first_row_values = tuple(c(v) for c, v in zip(converters, first_row.values()))
-        print(f"First row: {first_row_values}")
-        yield first_row_values
-        num_read += 1
-        for row in csv_reader:
-            yield tuple(c(v) for c, v in zip(converters, row.values()))
-            num_read += 1
-            if num_read % 1_000_000 == 0:
-                print(f"    Read {num_read} rows ...")
-        assert num_read == num_rows, f"Estimate of number of rows {num_rows} != actual {num_read}!"
+    # Note: To work around a bug when `names` is present but `columns` is empty,
+    # construct this manually.
+    table = bcolz.ctable.fromdataframe(
+        first_chunk,
+        # For some reason, higher compression levels are actually performing worse.
+        cparams=bcolz.cparams(clevel=3, cname="lz4hc", shuffle=1),
+        rootdir=str(out_dir),
+    )
 
-    print(f"Generating bcolz table with {num_rows} rows, data types {types}")
-    gen = _data_gen()
-    table = bcolz.fromiter(gen, dtype=types, count=num_rows, rootdir=str(out_dir))
-    try:
-        next(gen)
-        raise ValueError("Not all rows consumed!")
-    except StopIteration:
-        return first_row, table
+    for next_chunk in data_frame_chunks:
+        _convert_df_to_32_bit(next_chunk)
+        table.append(cols=[next_chunk[col] for col in column_names])
+    table.flush()
+    num_rows = table.shape[0]
+    size_mb = get_tree_size(out_dir) / (1024.0**2)
+    print(
+        f"Created bcolz table with {num_rows} rows, compression settings "
+        f"{table.cparams}, final size {size_mb:.1f} MiB"
+    )
 
 
 def main():
@@ -116,24 +108,7 @@ def main():
     dataset = BcolzDataset(out_dir)
 
     dataset.clear_files()  # prompt and clear files if they exist.
-
-    print("Scanning number of rows")
-    with open(args.source_file, newline='') as csvfile:
-        reader = csv.reader(csvfile)
-        header_row = next(reader)
-        for name in header_row:
-            assert name in _col_to_data_type, f"Unknown column {name}"
-        wc_output = subprocess.check_output(["wc", "-l", args.source_file])
-        num_rows = int(wc_output.strip().split()[0]) - 1  # has a header
-
-    with open(args.source_file, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        first_row, table = create_dataset(
-            csv_reader=reader, num_rows=num_rows, out_dir=out_dir
-        )
-        del table  # unused
-
-    dataset.write_column_names(list(first_row.keys()))
+    create_dataset(source_file=args.source_file, out_dir=out_dir)
 
 
 if __name__ == '__main__':
