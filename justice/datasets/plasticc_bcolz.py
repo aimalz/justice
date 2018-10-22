@@ -17,20 +17,6 @@ from justice import path_util
 _root_dir = path_util.data_dir / 'plasticc_bcolz'
 
 
-def get_tree_size(path):
-    """Return total size of files in given path and subdirs.
-
-    Copied from https://www.python.org/dev/peps/pep-0471/ (public domain).
-    """
-    total = 0
-    for entry in os.scandir(path):
-        if entry.is_dir(follow_symlinks=False):
-            total += get_tree_size(entry.path)
-        else:
-            total += entry.stat(follow_symlinks=False).st_size
-    return total
-
-
 class BcolzDataset(object):
     def __init__(self, bcolz_dir):
         self.bcolz_dir = bcolz_dir
@@ -89,7 +75,7 @@ def create_dataset(*, source_file, out_dir):
         table.append(cols=[next_chunk[col] for col in column_names])
     table.flush()
     num_rows = table.shape[0]
-    size_mb = get_tree_size(out_dir) / (1024.0**2)
+    size_mb = table.cbytes / (1024.0**2)
     print(
         f"Created bcolz table with {num_rows} rows, compression settings "
         f"{table.cparams}, final size {size_mb:.1f} MiB"
