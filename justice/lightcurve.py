@@ -2,7 +2,6 @@ import abc
 import collections
 import math
 import typing
-from tensorflow.contrib.framework import nest
 import numpy as np
 import scipy.stats as sps
 
