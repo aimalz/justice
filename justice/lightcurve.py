@@ -158,13 +158,31 @@ class _LC:
 
 
 class LC2D:
+    """Abstractly, a collection of points (plus errors) in (pwav, time, flux) space
+    We hope to construct a 2D kernel to describe the distribution that these points
+    are sampled from.
+
+    The interface for `george` takes a single "x" and "y", which
+    really mean "independent variables" and "dependent variables". So this class
+    offers `invars` and `outvars` as arrays.
+    """
     def __init__(self, pwav, time, flux, flux_err, detected):
         assert pwav.shape == time.shape
         assert time.shape == flux.shape
         assert flux.shape == flux_err.shape
         assert flux_err.shape == detected.shape
-        # pwav is highly compressible, hinting that there's a better format
-        # but this is the format required by george
-        self.invars = numpy.array([pwav, time])
-        self.outvars = numpy.array([flux, flux_err])
-        self.detected = detected
+        self._invars = numpy.array([pwav, time])
+        self._outvars = numpy.array([flux, flux_err])
+        self._detected = detected
+
+    @property
+    def invars(self):
+        return self._invars
+
+    @property
+    def outvars(self):
+        return self._outvars
+
+    @property
+    def detected(self):
+        return self._detected

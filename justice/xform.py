@@ -6,11 +6,15 @@ import collections
 
 class BandNameMapper:
     """
-    Our observation space is indexed by discrete BandNames
-    but our model space is indexed by continuous pseudo-wavelength (pwav)
-    An instance of `BandNameMapper` represents the injection of BandNames into points
-    on the pwav space. Here, the mapping is represented as a dictionary of pwavs
-    so that BandName b -> pwavs[b]
+    ("pwav" means pseudo-wavelength. "pseudo" because the filters are aggregating
+    across jagged absorption spectra, making it infeasible to model true wavelengths)
+
+    An observation is six discrete bands.
+    But a proper model is more like a 2D surface in a space of (pwav, time, flux)
+    We need some object to represent the conversion from independent-seeming bands
+    to stripes on that 2D surface
+    A `BandNameMapper` has a dictionary of pwavs so that BandName b -> pwavs[b],
+    putting each observed band at a *constant* pwav
     The numbers you supply here should already have redshift incorporated
     """
 
@@ -65,10 +69,6 @@ class LinearBandDataXform(BandDataXform):
         new_yerr = np.sqrt(self._dilate_flux) * bd.flux_err
         return lightcurve.BandData(new_x, new_y, new_yerr)
 
-    @classmethod
-    def ivals(cls):
-        return np.array([0, 0, 1, 1])
-
 
 class LCXform:
     __metaclass__ = abc.ABCMeta
@@ -79,6 +79,8 @@ class LCXform:
 
 
 class IndependentLCXform(LCXform):
+    """Every band gets a different transform"""
+
     def __init__(self, **band_xforms):
         self._band_xforms: collections.OrderedDict[str, BandDataXform] = collections.OrderedDict()
         for b in sorted(band_xforms.keys()):
@@ -93,7 +95,9 @@ class IndependentLCXform(LCXform):
         return lc.__class__(**new_bands)
 
 
-class SimultaneousLCXform(LCXform):
+class SameLCXform(LCXform):
+    """All bands get the same transform"""
+
     def __init__(self, band_xform):
         self._band_xform = band_xform
 
@@ -105,6 +109,9 @@ class SimultaneousLCXform(LCXform):
 
 
 class LC2DXform:
+    """Just a stub for now. We don't know what these functions might look like yet
+    """
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod

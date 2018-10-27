@@ -35,7 +35,7 @@ def opt_alignment(
     if options is None:
         options = {'maxiter': 10000}
     if ivals is None:
-        ivals = xform.LinearBandDataXform.ivals()
+        ivals = np.array([0, 0, 1, 1])
 
     if method != 'Nelder-Mead':
 
@@ -65,52 +65,3 @@ def opt_alignment(
         print(res)
     res_xform = xform.SimultaneousLCXform(xform.LinearBandDataXform(*res.x))
     return res_xform
-
-
-class OverlapCostComponent(object):
-    __slots__ = ("cost_outside", "cost_percentiles", "cost_base")
-
-    def __init__(self, cost_percentiles, cost_outside=None):
-        """
-        Represents the cost component for overlap.
-
-        :param cost_percentiles: Array with costs by percentile. e.g. if the array
-            is [1.0, 0.5, 0.0], and the light curves overlap 40%, then the result will be 0.6.
-            Generally the cost should decrease as the light curves overlap more.
-        :param cost_outside: Cost outside array; defaults to None. Can be something
-            higher than `cost_percentiles` if desired.
-        """
-        for x, x_next in zip(cost_percentiles, cost_percentiles[1:]):
-            if x_next > x:
-                raise ValueError("Expected decreasing sequence.")
-        self.cost_percentiles = np.array(cost_percentiles, dtype=np.float64)
-        self.cost_outside = float(
-            cost_outside if cost_outside is not None else cost_percentiles[0]
-        )
-        self.cost_base = np.linspace(0, 1, len(cost_percentiles))
-
-    def cost(self, lca: lightcurve._LC, lcb: lightcurve._LC) -> float:
-        """
-
-        :param lca: First light curve.
-        :param lcb: Second light curve.
-        :return:
-        """
-
-        def _time_bounds(lc):
-            return (
-                min(np.min(band.time) for band in lc.bands.values()),
-                max(np.max(band.time) for band in lc.bands.values()),
-            )
-
-        min_lca, max_lca = _time_bounds(lca)
-        min_lcb, max_lcb = _time_bounds(lcb)
-        overlap = min(max_lca, max_lcb) - max(min_lca, min_lcb)
-        if overlap <= 0:
-            return self.cost_outside
-        else:
-            overlap_percent = (2 * overlap) / ((max_lca - min_lca) + (max_lcb - min_lcb))
-            assert 0.0 <= overlap_percent <= 1.0
-            return np.interp(
-                x=overlap_percent, xp=self.cost_base, fp=self.cost_percentiles
-            )
