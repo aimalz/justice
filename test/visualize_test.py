@@ -21,7 +21,7 @@ def test_plot_arclen_res():
     glc2 = sim.TestLC.make_hard_gauss()
 
     xform1 = xform.LinearBandDataXform(200, 0, 1, 1)
-    lcxf = xform.SimultaneousLCXform(xform1)
+    lcxf = xform.SameLCXform(xform1)
 
     vis.plot_arclen_res(glc1, glc2, lcxf)
 

@@ -12,7 +12,7 @@ def test_connect_the_dots():
 def test_arclen():
     glc = sim.TestLC.make_hard_gauss()
 
-    aff = xform.SimultaneousLCXform(xform.LinearBandDataXform(50, 1, 1.5, 1))
+    aff = xform.SameLCXform(xform.LinearBandDataXform(50, 1, 1.5, 1))
 
     glc2 = aff.apply(glc)
 
