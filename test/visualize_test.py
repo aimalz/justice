@@ -1,6 +1,4 @@
-import numpy as np
 import justice.simulate as sim
-import justice.summarize as summ
 
 import justice.xform as xform
 import justice.visualize as vis
@@ -22,9 +20,10 @@ def test_plot_arclen_res():
     glc1 = sim.TestLC.make_easy_gauss()
     glc2 = sim.TestLC.make_hard_gauss()
 
-    xform1 = glc1.get_xform()
+    xform1 = xform.LinearBandDataXform(200, 0, 1, 1)
+    lcxf = xform.SameLCXform(xform1)
 
-    vis.plot_arclen_res(glc1, glc2, xform1)
+    vis.plot_arclen_res(glc1, glc2, lcxf)
 
 
 def test_plot_gp_res():
