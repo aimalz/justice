@@ -5,7 +5,7 @@ Note some functions are already in lightcurve.py's PlasticcDatasetLC class.
 """
 import os.path
 import random
-
+import pathlib
 import sqlite3
 
 import pandas as pd
@@ -13,6 +13,7 @@ import numpy as np
 
 from justice import path_util
 from justice import lightcurve
+from justice.datasets import plasticc_bcolz
 
 
 def _filtered_fetch(df):
@@ -134,12 +135,63 @@ class PlasticcDatasetLC(lightcurve._LC):
         return lc
 
     @classmethod
+    def _bcolz_get_lcs(cls, bcolz_table, meta_table, obj_ids):
+        query_parts = ['(object_id == {})'.format(o) for o in obj_ids]
+        query = ' | '.join(query_parts)
+        bcolz_map = bcolz_table.where(query)
+        # TODO: make this more efficient
+        all_raw_bands = {}
+        for o in obj_ids:
+            all_raw_bands[o] = {}
+            for passband, _ in enumerate(cls.expected_bands):
+                # ('time', 'flux', 'flux_err', 'detected')
+                all_raw_bands[o][passband] = ([], [], [], [])
+        for row in bcolz_map:
+            o = row[0]
+            passband = row[2]
+            all_raw_bands[o][passband][0].append(row[1])  # 'mjd'
+            all_raw_bands[o][passband][1].append(row[3])  # 'flux'
+            all_raw_bands[o][passband][2].append(row[4])  # 'flux_err'
+            all_raw_bands[o][passband][3].append(row[5])  # 'detected'
+        lcs = {}
+        for o, raw_bands in all_raw_bands.items():
+            bands = {}
+            for passband, (time, flux, flux_err, detected) in raw_bands.items():
+                bands[cls.expected_bands[passband]] = lightcurve.BandData(
+                    np.array(time),
+                    np.array(flux),
+                    np.array(flux_err),
+                    np.array(detected))
+            lcs[o] = cls(**bands)
+        meta_attrs = ['ddf', 'decl', 'distmod', 'gal_b', 'gal_l', 'hostgal_photoz',
+                      'hostgal_photoz_err', 'hostgal_specz', 'mwebv', 'object_id', 'ra']
+
+        bcolz_meta_map = meta_table.where(query)
+
+        for meta_row in bcolz_meta_map:
+            o = meta_row[0]
+            lc = lcs[o]
+            lc.meta = {}
+            for m in meta_attrs:
+                lc.meta[m] = getattr(meta_row, m)
+            if hasattr(meta_row, 'target'):
+                lc.meta['target'] = getattr(meta_row, 'target')
+
+        return list(lcs.values())
+
+    @classmethod
     def get_lc(cls, source, dataset, obj_id):
         if isinstance(source, sqlite3.Connection):
             return cls._sqlite_get_lc(source, dataset, obj_id)
         elif isinstance(source, str) and source.endswith('.db'):
             with sqlite3.connect(source) as conn:
                 return cls._sqlite_get_lc(conn, dataset, obj_id)
+        elif isinstance(source, str) and 'plasticc_bcolz' in source:
+            bcolz_dataset = plasticc_bcolz.BcolzDataset(pathlib.Path(source) / dataset)
+            bcolz_table = bcolz_dataset.read_table()
+            bcolz_meta = plasticc_bcolz.BcolzDataset(pathlib.Path(source) / (dataset + '_meta'))
+            meta_table = bcolz_meta.read_table()
+            return cls._bcolz_get_lcs(bcolz_table, meta_table, [obj_id])[0]
         else:
             raise NotImplementedError(
                 "Don't know how to read LCs from {}", format(source)
@@ -152,6 +204,18 @@ class PlasticcDatasetLC(lightcurve._LC):
         return [cls._sqlite_get_lc(conn, 'training_set', o) for (o, ) in obj_ids]
 
     @classmethod
+    def _bcolz_get_lc_by_target(cls, source, target):
+        bcolz_meta = plasticc_bcolz.BcolzDataset(pathlib.Path(source) / 'training_set_meta')
+        bcolz_meta_table = bcolz_meta.read_table()
+        bcolz_meta_map = bcolz_meta_table.where('target == {}'.format(target), outcols=['object_id'])
+        obj_ids = [row.object_id for row in bcolz_meta_map]
+
+        bcolz_dataset = plasticc_bcolz.BcolzDataset(pathlib.Path(source) / 'training_set')
+        bcolz_table = bcolz_dataset.read_table()
+
+        return cls._bcolz_get_lcs(bcolz_table, bcolz_meta_table, obj_ids)
+
+    @classmethod
     def get_lc_by_target(cls, source, target):
         # assuming training set because we don't have targets for the test set
         if isinstance(source, sqlite3.Connection):
@@ -159,6 +223,8 @@ class PlasticcDatasetLC(lightcurve._LC):
         elif isinstance(source, str) and source.endswith('.db'):
             with sqlite3.connect(source) as conn:
                 return cls._sqlite_get_lc_by_target(conn, target)
+        elif isinstance(source, str) and 'plasticc_bcolz' in source:
+            return cls._bcolz_get_lc_by_target(source, target)
         else:
             raise NotImplementedError(
                 "Don't know how to read LCs from {}", format(source)
