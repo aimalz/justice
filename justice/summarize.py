@@ -49,7 +49,7 @@ def opt_alignment(
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
         bd_xform = xform.LinearBandDataXform(*vals)
-        lca_xform = xform.SimultaneousLCXform(bd_xform)
+        lca_xform = xform.SameLCXform(bd_xform)
         lc = lca_xform.apply(lcb)
         new_lc = lca + lc
         length = new_lc.connect_the_dots()
