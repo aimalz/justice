@@ -1,7 +1,4 @@
-import pytest
-
 import numpy as np
-import justice.lightcurve
 import justice.simulate as sim
 import justice.summarize as summ
 from justice import xform
@@ -15,10 +12,9 @@ def test_connect_the_dots():
 def test_arclen():
     glc = sim.TestLC.make_hard_gauss()
 
-    values = np.array(nest.flatten([50., {'a': 1., 'b': 1.}, 1.5, {'a': 1., 'b': 1.}, 0.]))
+    aff = xform.SameLCXform(xform.LinearBandDataXform(50, 1, 1.5, 1))
 
-    aff = glc.get_xform(values)
-    glc2 = xform.transform(glc, aff)
+    glc2 = aff.apply(glc)
 
-    aff2 = summ.opt_arclen(glc, glc2, vb=False, options={'maxiter': 10})
+    aff2 = summ.opt_alignment(glc, glc2, vb=False, options={'maxiter': 10})
     del aff2  # unused
