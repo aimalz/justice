@@ -46,20 +46,6 @@ def opt_alignment(
     else:
         constraints = None
 
-    def _preprocess(lca, lcb):
-	# Not going to work but need to fix!
-        ty = {}
-        dy = {}  # We may want to line up xs as well
-        lcs = []
-        for lc in [lca, lcb]:
-            for b in 'ugrizY':
-                ty[b] = np.min(lc.bands[b].flux)
-                dy[b] = 1. / (np.max(lc.bands[b].flux) - ty[b])
-            lcs.append(xform.Xform(0., ty, 1., dy, 0.).transform(lc))
-        return lcs[0], lcs[1]
-
-    lca, lcb = _preprocess(lca, lcb)
-
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
         bd_xform = xform.LinearBandDataXform(*vals)
