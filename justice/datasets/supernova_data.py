@@ -22,6 +22,11 @@ index_filename = sn_dir / 'index_df.pickle'
 all_lc_data = mmap_array.MmapArrayFile('all', array_dir=sn_dir, order='C')
 
 
+class SNDatasetLC(lightcurve._LC):
+    """Supernova dataset light curve."""
+    expected_bands = ['g', 'r', 'i', 'z']
+
+
 def _parse_truth_file_dat_line(line):
     filename, obj_cls = line.strip().split()
     return filename, obj_cls
@@ -138,7 +143,7 @@ def generate_data_main():
 
 def format_dense_multi_band_from_lc_dict(lc_dict,
                                          band_order=('g', 'r', 'i',
-                                                     'z')) -> lightcurve.SNDatasetLC:
+                                                     'z')) -> SNDatasetLC:
     """Formats a multi-band LC dictionary to a dense dataset.
 
     Currently reformats a time series to dense data, as if every curve had sampled at the same time.
@@ -171,7 +176,7 @@ def format_dense_multi_band_from_lc_dict(lc_dict,
             flux=dense_data[:, i, 1],
             flux_err=dense_data[:, i, 2]
         )
-    return lightcurve.SNDatasetLC(**band_data)
+    return SNDatasetLC(**band_data)
 
 
 class SNDataset(object):

@@ -117,7 +117,7 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default', title
                     lc.bands[b].time, lc.bands[b].flux, lc.bands[b].flux_err
                 ).power(frequency)
                 ax[i, 1].plot(frequency, power)
-        # plt.ylabel(b).set_rotation(0)
+        plt.ylabel(b).set_rotation(0)
     plt.xlabel('time')
     plt.subplots_adjust(hspace=0.4)
     plt.tight_layout()
@@ -137,7 +137,7 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
     :return: figure
     """
     fig = plt.figure(figsize=(10, 10))
-    lcc = xforma.transform(lcb)
+    lcc = xforma.apply(lcb)
     lcd = lca + lcc
     numbands = lca.nbands
     for i, b in enumerate(lca.bands):

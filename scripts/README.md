@@ -1,4 +1,4 @@
-First, download the Kaggle datset files, and place,
+First, download the Kaggle datset files. If you download files through the API tool or manually, place
 
 * `test_set_metadata.csv`
 * `test_set.csv`
@@ -6,7 +6,17 @@ First, download the Kaggle datset files, and place,
 * `training_set.csv`
 
 in the `data/` folder. (If you don't want to move them, use `cp -s` to make symlinks
-instead.) Then run ingestion scripts,
+instead.)
+
+If you downloaded the zip file (click "Download all"), run,
+
+```sh
+cd data/
+unzip ~/Downloads/all.zip
+chmod 644 *.csv
+```
+
+Then run ingestion scripts,
 
 ```sh
 cd data/

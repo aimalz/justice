@@ -13,6 +13,11 @@ from justice.datasets import mmap_array
 ogle_dir = mmap_array.default_array_dir / 'ogle_iii'
 
 
+class OGLEDatasetLC(lightcurve._LC):
+    """OGLE dataset light curve."""
+    expected_bands = ['I', 'V']
+
+
 def for_subset(name):
     return mmap_array.IndexedArrayDescriptor(base_dir=(ogle_dir / name))
 
@@ -56,7 +61,7 @@ class OgleDataset(mmap_array.IndexedArray):
         }
         if len(row_and_data) != len(result):
             raise ValueError("band does not uniquely identify sub-ranges")
-        return lightcurve.OGLEDatasetLC(**result)
+        return OGLEDatasetLC(**result)
 
     @classmethod
     def read_for_name(cls, name):
