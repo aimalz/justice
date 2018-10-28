@@ -147,19 +147,19 @@ class PlasticcDatasetLC(lightcurve._LC):
             )
 
     @classmethod
-    def _sqlite_get_lc_by_target(cls, conn, target):
+    def _sqlite_get_lcs_by_target(cls, conn, target):
         q = '''select object_id from training_set_meta where target = ?'''
         obj_ids = conn.execute(q, [target]).fetchall()
         return [cls._sqlite_get_lc(conn, 'training_set', o) for (o, ) in obj_ids]
 
     @classmethod
-    def get_lc_by_target(cls, source, target):
+    def get_lcs_by_target(cls, source, target):
         # assuming training set because we don't have targets for the test set
         if isinstance(source, sqlite3.Connection):
-            return cls._sqlite_get_lc_by_target(source, target)
+            return cls._sqlite_get_lcs_by_target(source, target)
         elif isinstance(source, str) and source.endswith('.db'):
             with sqlite3.connect(source) as conn:
-                return cls._sqlite_get_lc_by_target(conn, target)
+                return cls._sqlite_get_lcs_by_target(conn, target)
         else:
             raise NotImplementedError(
                 "Don't know how to read LCs from {}", format(source)
@@ -171,8 +171,7 @@ class PlasticcDatasetLC(lightcurve._LC):
         return xform.BandNameMapper(**{'u': 300., 'g':400., 'r':500., 'i': 600., 'z': 700., 'y': 800})
     
     @classmethod
-    def get_2dlc_by_target(cls, source, target):
-        lc = cls.get_2dlc_by_target(source, target)
-        bnm = get_bandnamemapper()
-        return bnm.make_lc2d(lc)
-        
+    def get_2dlcs_by_target(cls, source, target):
+        lcs = cls.get_lcs_by_target(source, target)
+        bnm = cls.get_bandnamemapper()
+        return [bnm.make_lc2d(lc) for lc in lcs]

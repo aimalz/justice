@@ -171,8 +171,8 @@ class LC2D:
         assert time.shape == flux.shape
         assert flux.shape == flux_err.shape
         assert flux_err.shape == detected.shape
-        self._invars = numpy.array([pwav, time])
-        self._outvars = numpy.array([flux, flux_err])
+        self._invars = np.array([pwav, time]).T
+        self._outvars = np.array([flux, flux_err]).T
         self._detected = detected
 
     @property
