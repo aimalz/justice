@@ -13,6 +13,7 @@ import numpy as np
 
 from justice import path_util
 from justice import lightcurve
+from justice import xform
 
 
 def _filtered_fetch(df):
@@ -163,3 +164,15 @@ class PlasticcDatasetLC(lightcurve._LC):
             raise NotImplementedError(
                 "Don't know how to read LCs from {}", format(source)
             )
+
+    @classmethod
+    def get_bandnamemapper(cls):
+        # THESE ARE NOT THE REAL NUMBERS ALEX PLEASE FIX!! -davyd
+        return xform.BandNameMapper(**{'u': 300., 'g':400., 'r':500., 'i': 600., 'z': 700., 'y': 800})
+    
+    @classmethod
+    def get_2dlc_by_target(cls, source, target):
+        lc = cls.get_2dlc_by_target(source, target)
+        bnm = get_bandnamemapper()
+        return bnm.make_lc2d(lc)
+        
