@@ -123,7 +123,8 @@ def plot_lcs(
         #ax[i, 0].set_ylabel('flux')
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
-            ax[i, 1].set_xlabel('period')
+            if plot_period:
+                ax[i, 1].set_xlabel('period')
 
 # <<<<<<< HEAD
     #     if plot_period:
@@ -158,7 +159,7 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
     :return: figure
     """
     fig = plt.figure(figsize=(10, 10))
-    lcc = xforma.transform(lcb)
+    lcc = xforma.apply(lcb)
     lcd = lca + lcc
     numbands = lca.nbands
     for i, b in enumerate(lca.bands):
