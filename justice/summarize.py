@@ -63,5 +63,5 @@ def opt_alignment(
     )
     if vb:
         print(res)
-    res_xform = xform.SimultaneousLCXform(xform.LinearBandDataXform(*res.x))
+    res_xform = xform.SameLCXform(xform.LinearBandDataXform(*res.x))
     return res_xform
