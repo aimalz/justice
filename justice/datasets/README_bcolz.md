@@ -55,6 +55,7 @@ by the Competition Website and these Rules.
 </details>
 
  1. Get the magnet link and key file from your teammates.
+ 1. Especially if you're on a multi-user system, `chmod g-rwx,o-rwx <keyfile>`.
  1. Download the magnet link. Transmission (https://transmissionbt.com/) is a decent
     client for OS X and Linux if you need a recommendation. Press Ctrl+U and paste in the
     magnet link.
