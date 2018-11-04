@@ -28,15 +28,15 @@ class BandNameMapper:
             this_e = lc.expected_bands[i]
             next_e = lc.expected_bands[i + 1]
             assert self.pwavs[this_e] < self.pwavs[next_e], 'Bands must be mapped to increasing pwavs'
-        pwav = np.concat([
+        pwav = np.concatenate([
             np.ones_like(lc.bands[b].time) * self.pwavs[b]
             for b in lc.expected_bands
         ])
 
-        time = np.concat([band.time for name, band in lc.bands.items()])
-        flux = np.concat([band.flux for name, band in lc.bands.items()])
-        flux_err = np.concat([band.flux_err for name, band in lc.bands.items()])
-        detected = np.concat([band.detected for name, band in lc.bands.items()])
+        time = np.concatenate([band.time for name, band in lc.bands.items()])
+        flux = np.concatenate([band.flux for name, band in lc.bands.items()])
+        flux_err = np.concatenate([band.flux_err for name, band in lc.bands.items()])
+        detected = np.concatenate([band.detected for name, band in lc.bands.items()])
         return lightcurve.LC2D(pwav, time, flux, flux_err, detected)
 
 
