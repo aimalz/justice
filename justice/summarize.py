@@ -16,7 +16,7 @@ def opt_alignment(
     constraints=None,
     method='Nelder-Mead',
     options=None,
-    vb=False,
+    vb=True,
 ) -> xform.LCXform:
     """
     Minimizes the arclength between two lightcurves after merging
@@ -45,24 +45,6 @@ def opt_alignment(
         constraints += [{'type': 'ineq', 'fun': pos_dil}]
     else:
         constraints = None
-
-    def _preprocess(lca, lcb):
-        lcs = []
-        for lc in [lca, lcb]:
-            band_xforms = {}
-            for b in lc.bands:  # 'ugrizY':
-                ty = np.min(lc.bands[b].flux)
-                band_xforms[b] = xform.LinearBandDataXform(
-                    translate_time=0,
-                    translate_flux=ty,
-                    dilate_time=0,
-                    dilate_flux=1. / (np.max(lc.bands[b].flux) - ty),
-                )
-            lc_xform = xform.IndependentLCXform(**band_xforms)
-            lcs.append(lc_xform.apply(lc))
-        return lcs[0], lcs[1]
-
-    lca, lcb = _preprocess(lca, lcb)
 
     # don't know if this way of handling constraints actually works -- untested!
     def _helper(vals):
