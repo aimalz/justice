@@ -57,7 +57,7 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
     return fig
 
 
-def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
+def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default', title=None):
     """Plot multiple (or single) lightcurves at once
 
     :param lcs: list of lightcurves
@@ -69,7 +69,7 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
     # This needs a way to have names of the bands, but it works for now.
     if not isinstance(lcs, list):
         lcs = [lcs]
-    fig = plt.figure(figsize=(15,18))
+    fig = plt.figure(figsize=(15, 18))
 
     numbands = lcs[0].nbands
     bands = lcs[0].bands
@@ -86,16 +86,28 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default'):
         squeeze=False
     )
 
+    fig.suptitle(title)
+
     for i, b in enumerate(bands):
         for lci in lcs:
+            detec = lci.bands[b].detected
             ax[i, 0].errorbar(
-                lci.bands[b].time,
-                lci.bands[b].flux,
-                yerr=lci.bands[b].flux_err,
+                lci.bands[b].time[detec == 1],
+                lci.bands[b].flux[detec == 1],
+                yerr=lci.bands[b].flux_err[detec == 1],
                 linestyle='None',
                 marker='.'
             )
-        ax[i, 0].set_ylabel('flux')
+            ax[i, 0].errorbar(
+                lci.bands[b].time[detec == 0],
+                lci.bands[b].flux[detec == 0],
+                yerr=lci.bands[b].flux_err[detec == 0],
+                linestyle='None',
+                alpha=.2,
+                marker='.'
+            )
+
+        #ax[i, 0].set_ylabel('flux')
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
 
@@ -124,7 +136,7 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
     :param save: save fig or not
     :return: figure
     """
-    fig = plt.figure()
+    fig = plt.figure(figsize=(10, 10))
     lcc = xforma.apply(lcb)
     lcd = lca + lcc
     numbands = lca.nbands
@@ -134,10 +146,19 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
         lccb = lcc.bands[b]
         lcdb = lcd.bands[b]
         plt.subplot(numbands, 1, i + 1)
-        plt.errorbar(lcab.time, lcab.flux, yerr=lcab.flux_err, label='reference')
-        plt.errorbar(lcbb.time, lcbb.flux, yerr=lcbb.flux_err, label='proposal')
-        plt.errorbar(lccb.time, lccb.flux, yerr=lccb.flux_err, label='transformed')
-        plt.errorbar(lcdb.time, lcdb.flux, yerr=lcdb.flux_err, label='merged')
+        plt.errorbar(
+            lcab.time,
+            lcab.flux,
+            yerr=lcab.flux_err,
+            fmt='+',
+            label='reference')
+        plt.errorbar(lcbb.time, lcbb.flux, yerr=lcbb.flux_err, fmt='+', label='proposal')
+        plt.errorbar(
+            lccb.time, lccb.flux, yerr=lccb.flux_err, fmt='+', label='transformed'
+        )
+        plt.errorbar(
+            lcdb.time, lcdb.flux, yerr=lcdb.flux_err, fmt='-', label='merged', alpha=.3
+        )
     plt.legend()
     plt.xlabel('time')
     plt.ylabel('brightness')

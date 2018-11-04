@@ -72,10 +72,13 @@ class BandData(object):
         times = np.concatenate((self.time, other.time))
         fluxes = np.concatenate((self.flux, other.flux))
         flux_errs = np.concatenate((self.flux_err, other.flux_err))
+        detecteds = np.concatenate((self.detected, other.detected))
 
         # tried kind='mergesort', but it wasn't any faster with 1e7 points
         ordinals = np.argsort(times)
-        return BandData(times[ordinals], fluxes[ordinals], flux_errs[ordinals])
+        return BandData(
+            times[ordinals], fluxes[ordinals], flux_errs[ordinals], detecteds[ordinals]
+        )
 
     def _masked(self, mask: np.ndarray):
         return self.__class__(
@@ -116,8 +119,10 @@ class BandData(object):
         :return: Arc length measurement.
         """
         # ignores errorbars
-        time_diffs = self.time[1:] - self.time[:-1]
-        flux_diffs = self.flux[1:] - self.flux[:-1]
+        dettimes = self.time[self.detected == 1]
+        detfluxes = self.flux[self.detected == 1]
+        time_diffs = dettimes[1:] - dettimes[:-1]
+        flux_diffs = detfluxes[1:] - detfluxes[:-1]
         return float(np.sum(np.sqrt(time_diffs**2 + flux_diffs**2)))
 
     @classmethod
