@@ -1,9 +1,30 @@
 import abc
 import collections
-import math
 import typing
 import numpy as np
 import scipy.stats as sps
+
+
+class BandPoint(object):
+    __slots__ = ('time', 'flux', 'flux_err', 'detected')
+
+    def __init__(self, time, flux, flux_err, detected):
+        self.time = time
+        self.flux = flux
+        self.flux_err = flux_err
+        self.detected = detected
+
+    def __repr__(self):
+        return (
+            f"BandPoint[time={self.time}, flux={self.flux}, "
+            f"flux_err={self.flux_err}, detected={self.detected}]"
+        )
+
+    def __eq__(self, other):
+        return (
+            self.time == other.time and self.flux == other.flux and
+            self.flux_err == other.flux_err and self.detected == other.detected
+        )
 
 
 class BandData(object):
@@ -55,6 +76,29 @@ class BandData(object):
         # tried kind='mergesort', but it wasn't any faster with 1e7 points
         ordinals = np.argsort(times)
         return BandData(times[ordinals], fluxes[ordinals], flux_errs[ordinals])
+
+    def _masked(self, mask: np.ndarray):
+        return self.__class__(
+            time=self.time[mask],
+            flux=self.flux[mask],
+            flux_err=self.flux_err[mask],
+            detected=self.detected[mask],
+        )
+
+    def before_time(self, time: float):
+        return self._masked(self.time < time)
+
+    def after_time(self, time: float):
+        return self._masked(self.time > time)
+
+    def closest_point(self, time: float):
+        idx = np.argmin(np.abs(self.time - time))
+        return BandPoint(
+            time=self.time[idx],
+            flux=self.flux[idx],
+            flux_err=self.flux_err[idx],
+            detected=self.detected[idx],
+        )
 
     @classmethod
     def from_cadence_shape_and_errfracs(cls, cadence, shape, errfracs):
@@ -166,6 +210,7 @@ class LC2D:
     really mean "independent variables" and "dependent variables". So this class
     offers `invars` and `outvars` as arrays.
     """
+
     def __init__(self, pwav, time, flux, flux_err, detected):
         assert pwav.shape == time.shape
         assert time.shape == flux.shape
