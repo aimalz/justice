@@ -136,47 +136,40 @@ class PlasticcDatasetLC(lightcurve._LC):
 
     @classmethod
     def _bcolz_get_lcs(cls, bcolz_table, meta_table, obj_ids):
-        query_parts = ['(object_id == {})'.format(o) for o in obj_ids]
+        query_parts = ['(object_id == {})'.format(obj_id) for obj_id in obj_ids]
         query = ' | '.join(query_parts)
         bcolz_map = bcolz_table.where(query)
-        # TODO: make this more efficient
-        all_raw_bands = {}
-        for o in obj_ids:
-            all_raw_bands[o] = {}
-            for passband, _ in enumerate(cls.expected_bands):
-                # ('time', 'flux', 'flux_err', 'detected')
-                all_raw_bands[o][passband] = ([], [], [], [])
-        for row in bcolz_map:
-            o = row[0]
-            passband = row[2]
-            all_raw_bands[o][passband][0].append(row[1])  # 'mjd'
-            all_raw_bands[o][passband][1].append(row[3])  # 'flux'
-            all_raw_bands[o][passband][2].append(row[4])  # 'flux_err'
-            all_raw_bands[o][passband][3].append(row[5])  # 'detected'
-        lcs = {}
-        for o, raw_bands in all_raw_bands.items():
-            bands = {}
-            for passband, (time, flux, flux_err, detected) in raw_bands.items():
-                bands[cls.expected_bands[passband]] = lightcurve.BandData(
-                    np.array(time),
-                    np.array(flux),
-                    np.array(flux_err),
-                    np.array(detected))
-            lcs[o] = cls(**bands)
-        meta_attrs = ['ddf', 'decl', 'distmod', 'gal_b', 'gal_l', 'hostgal_photoz',
-                      'hostgal_photoz_err', 'hostgal_specz', 'mwebv', 'object_id', 'ra']
 
+        df = pd.DataFrame.from_records(bcolz_map, columns=bcolz_table.names)
+        groupby = df.groupby(['object_id', 'passband'])
+
+        all_raw_bands = {}
+        for group_key, indices in groupby.groups.items():
+            object_id, passband = group_key
+            thisband = df.ix[indices]
+            if object_id not in all_raw_bands:
+                all_raw_bands[object_id] = [None] * len(cls.expected_bands)
+            all_raw_bands[object_id][passband] = lightcurve.BandData(
+                thisband['mjd'],
+                thisband['flux'],
+                thisband['flux_err'],
+                thisband['detected'],
+            )
+        lcs = {}
+        for object_id, bands in all_raw_bands.items():
+            assert None not in bands, "If raw data is missing whole bands, then we have to rethink things"
+            lcs[object_id] = cls(**dict(zip(cls.expected_bands, bands)))
+        
         bcolz_meta_map = meta_table.where(query)
 
+        object_id_name_index = meta_table.names.index('object_id')
         for meta_row in bcolz_meta_map:
-            o = meta_row[0]
-            lc = lcs[o]
+            obj_id = meta_row[object_id_name_index]
+            lc = lcs[obj_id]
             lc.meta = {}
-            for m in meta_attrs:
-                lc.meta[m] = getattr(meta_row, m)
-            if hasattr(meta_row, 'target'):
-                lc.meta['target'] = getattr(meta_row, 'target')
-
+            for column_idx, column_name in enumerate(meta_table.names):
+                lc.meta[column_name] = meta_row[column_idx]
+            
         return list(lcs.values())
 
     @classmethod
