@@ -37,6 +37,26 @@ class BandSettings(object):
             })
         return merge_feature_dicts.merge_feature_dicts(feature_dicts)
 
+    def get_band_features(self, features, band_name):
+        """Extracts features for a specific band.
+
+        :param features: Feature dictionary, with keys from generate_per_band_features.
+        :param band_name: Name of the band to extract.
+        :return: New dict with per-band features.
+        """
+        prefix = f"band_{band_name}."
+        return {
+            key[len(prefix):]: value
+            for key, value in features.items()
+            if key.startswith(prefix)
+        }
+
+    def per_band_sub_model_fn(self, sub_model_fn, features, params):
+        return [
+            sub_model_fn(self.get_band_features(features, band_name), params=params)
+            for band_name in self.bands
+        ]
+
     @classmethod
     def from_params(cls, params):
         return cls(params["lc_bands"])

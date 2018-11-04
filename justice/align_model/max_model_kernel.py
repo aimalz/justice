@@ -79,7 +79,12 @@ def per_band_model_fn(band_features, params, debug_print=False):
     )
 
 
-def model_fn(features, labels, params):
-    del labels, params  # unused
+def feature_model_fn(features, labels, params):
+    del labels  # unused
     band_settings = band_settings_params.BandSettings.from_params(params)
-    features['left_points']
+    per_band_data = band_settings.per_band_sub_model_fn(
+        per_band_model_fn, features, params=params
+    )
+    result = tf.stack(per_band_data, axis=1)
+    graph_typecheck.assert_shape(result, [params["batch_size"], band_settings.nbands])
+    return {"is_max_soft": result}
