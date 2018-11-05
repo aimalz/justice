@@ -12,14 +12,18 @@ from gatspy import periodic
 
 
 class MultiBandPeriod(collections.OrderedDict):
-    __slots__ = ("period", )
+    __slots__ = (
+        "period",
+        "best_period",
+    )
 
-    def __init__(self, *, period, band_to_power):
+    def __init__(self, *, period, band_to_power, best_period=None):
         super().__init__(band_to_power)
         # for value in self.values():
         #     assert isinstance(value, np.ndarray)
         #     assert len(value.shape) == 1, "Expected 1D shape per band."
         self.period = period
+        self.best_period = best_period
 
     def plot(self, band_name):
         import matplotlib.pyplot as plt
@@ -39,23 +43,24 @@ class LsTransformBase(object):
 
     def __init__(self, period: typing.Union[str, np.ndarray] = 'default') -> None:
         if period == 'default':
-            self.period = 1. / np.linspace(0.1, 1., 100)
+            self.period = np.linspace(2., 500., 10000)
         else:
             assert isinstance(period, np.ndarray)
             self.period = period
 
     @abc.abstractmethod
-    def transform(self, lc: lightcurve._LC) -> MultiBandPeriod:
+    def apply(self, lc: lightcurve._LC) -> MultiBandPeriod:
         raise NotImplementedError()
 
 
 def _compute_ls(band, period):
-    return astropy.stats.LombScargle(
-        band.time, band.flux, band.flux_err).power(period)# replace with autopower soon
+    return astropy.stats.LombScargle(band.time, band.flux, band.flux_err).power(
+        period
+    )  # replace with autopower soon
 
 
 class IndependentLs(LsTransformBase):
-    def transform(self, lc: lightcurve._LC) -> MultiBandPeriod:
+    def apply(self, lc: lightcurve._LC) -> MultiBandPeriod:
         band_to_power = {
             band_name: _compute_ls(band, self.period)
             for band_name, band in lc.bands.items()
@@ -69,8 +74,7 @@ class MultiBandLs(LsTransformBase):
     However, this currently seems to give the same period distribution for all bands.
     """
 
-    def transform(self, lc: lightcurve._LC) -> MultiBandPeriod:
-
+    def apply(self, lc: lightcurve._LC) -> MultiBandPeriod:
         def _concat_for_all_bands(key_fcn):
             return np.concatenate([
                 key_fcn(name, band) for name, band in lc.bands.items()
@@ -83,11 +87,13 @@ class MultiBandLs(LsTransformBase):
             lambda name, band: np.full_like(band.time, name, dtype=str)
         )
 
-        model = periodic.LombScargleMultiband()
+        model = periodic.LombScargleMultiband(fit_period=True)
+        model.optimizer.period_range = (.1, np.max(times) - np.min(times))
         model.fit(times, fluxes, flux_errs, bands)
         power = model.periodogram(self.period)
         return MultiBandPeriod(
             period=self.period,
             band_to_power={name: power
-                           for name in lc.bands.keys()}
+                           for name in lc.bands.keys()},
+            best_period=model.best_period
         )

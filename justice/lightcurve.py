@@ -171,6 +171,7 @@ class LC2D:
     really mean "independent variables" and "dependent variables". So this class
     offers `invars` and `outvars` as arrays.
     """
+
     def __init__(self, pwav, time, flux, flux_err, detected):
         assert pwav.shape == time.shape
         assert time.shape == flux.shape

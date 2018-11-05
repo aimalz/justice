@@ -46,7 +46,7 @@ class PlasticcDataset(object):
 
     def get_lc(self, obj_id):
         from justice import lightcurve
-        return lightcurve.PlasticcDatasetLC.get_lc(
+        return PlasticcDatasetLC.get_lc(
             self.filename, self.base_table_name, obj_id=obj_id
         )
 
@@ -147,19 +147,21 @@ class PlasticcDatasetLC(lightcurve._LC):
             )
 
     @classmethod
-    def _sqlite_get_lcs_by_target(cls, conn, target):
+    def _sqlite_get_lcs_by_target(cls, conn, target, ddf):
         q = '''select object_id from training_set_meta where target = ?'''
+        if ddf:
+            q += '''and ddf = 1'''
         obj_ids = conn.execute(q, [target]).fetchall()
         return [cls._sqlite_get_lc(conn, 'training_set', o) for (o, ) in obj_ids]
 
     @classmethod
-    def get_lcs_by_target(cls, source, target):
+    def get_lcs_by_target(cls, source, target, ddf=False):
         # assuming training set because we don't have targets for the test set
         if isinstance(source, sqlite3.Connection):
-            return cls._sqlite_get_lcs_by_target(source, target)
+            return cls._sqlite_get_lcs_by_target(source, target, ddf)
         elif isinstance(source, str) and source.endswith('.db'):
             with sqlite3.connect(source) as conn:
-                return cls._sqlite_get_lcs_by_target(conn, target)
+                return cls._sqlite_get_lcs_by_target(conn, target, ddf)
         else:
             raise NotImplementedError(
                 "Don't know how to read LCs from {}", format(source)
@@ -168,8 +170,17 @@ class PlasticcDatasetLC(lightcurve._LC):
     @classmethod
     def get_bandnamemapper(cls):
         # THESE ARE NOT THE REAL NUMBERS ALEX PLEASE FIX!! -davyd
-        return xform.BandNameMapper(**{'u': 300., 'g':400., 'r':500., 'i': 600., 'z': 700., 'y': 800})
-    
+        return xform.BandNameMapper(
+            **{
+                'u': 300.,
+                'g': 400.,
+                'r': 500.,
+                'i': 600.,
+                'z': 700.,
+                'y': 800
+            }
+        )
+
     @classmethod
     def get_2dlcs_by_target(cls, source, target):
         lcs = cls.get_lcs_by_target(source, target)

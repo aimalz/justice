@@ -27,10 +27,11 @@ class BandNameMapper:
         for i in range(len(lc.expected_bands) - 1):
             this_e = lc.expected_bands[i]
             next_e = lc.expected_bands[i + 1]
-            assert self.pwavs[this_e] < self.pwavs[next_e], 'Bands must be mapped to increasing pwavs'
+            assert self.pwavs[this_e] < self.pwavs[
+                next_e
+            ], 'Bands must be mapped to increasing pwavs'
         pwav = np.concatenate([
-            np.ones_like(lc.bands[b].time) * self.pwavs[b]
-            for b in lc.expected_bands
+            np.ones_like(lc.bands[b].time) * self.pwavs[b] for b in lc.expected_bands
         ])
 
         time = np.concatenate([band.time for name, band in lc.bands.items()])
@@ -53,6 +54,7 @@ class BandNameMapper:
             for b in lc.bands
         }
         return lc.__class__(**bands)
+
 
 class BandDataXform:
     def __init__(self, time_fn, flux_fn, flux_err_fn):
@@ -96,7 +98,8 @@ class IndependentLCXform(LCXform):
     """Every band gets a different transform"""
 
     def __init__(self, **band_xforms):
-        self._band_xforms: collections.OrderedDict[str, BandDataXform] = collections.OrderedDict()
+        self._band_xforms: collections.OrderedDict[str, BandDataXform
+                                                   ] = collections.OrderedDict()
         for b in sorted(band_xforms.keys()):
             self._band_xforms[b] = band_xforms[b]
 

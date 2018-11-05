@@ -141,9 +141,8 @@ def generate_data_main():
     )
 
 
-def format_dense_multi_band_from_lc_dict(lc_dict,
-                                         band_order=('g', 'r', 'i',
-                                                     'z')) -> SNDatasetLC:
+def format_dense_multi_band_from_lc_dict(lc_dict, band_order=('g', 'r', 'i',
+                                                              'z')) -> SNDatasetLC:
     """Formats a multi-band LC dictionary to a dense dataset.
 
     Currently reformats a time series to dense data, as if every curve had sampled at the same time.

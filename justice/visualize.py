@@ -88,7 +88,7 @@ def plot_lcs(
     if plot_period:
         if period_transform is None:
             period_transform = period_distribution.IndependentLs()
-        period_per_lc = list(map(period_transform.transform, lcs))
+        period_per_lc = list(map(period_transform.apply, lcs))
 
     fig, ax = plt.subplots(
         nrows=numbands,
@@ -126,19 +126,18 @@ def plot_lcs(
             if plot_period:
                 ax[i, 1].set_xlabel('period')
 
-    #I merged this by hand, fix!
-    if plot_period:
-        for lc in lcs:
-             power = astropy.stats.LombScargle(lc.bands[b].time, lc.bands[b].flux, lc.bands[b].flux_err).power(frequency)
-    ax[i, 1].plot(frequency, power)
+        if plot_period:
+            # for lc in lcs:
+            #power = astropy.stats.LombScargle(lc.bands[b].time, lc.bands[b].flux, lc.bands[b].flux_err).power(period)
+            #ax[i, 1].plot(period, power)
+            for multi_band_period in period_per_lc:
+                ax[i, 1].plot(multi_band_period.period, multi_band_period[b])
+                #ax[i, 1].semilogx()
+
     plt.ylabel(b).set_rotation(0)
     plt.xlabel('time')
     plt.subplots_adjust(hspace=0.4)
     plt.tight_layout()
-        for multi_band_period in period_per_lc:
-            ax[i, 1].plot(1. / multi_band_period.period, multi_band_period[b])
-
-            ax[i, 1].semilogx()
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return fig
@@ -155,7 +154,7 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
     :return: figure
     """
     fig = plt.figure(figsize=(10, 10))
-    lcc = xforma.transform(lcb)
+    lcc = xforma.apply(lcb)
     fig = plt.figure()
     lcc = xforma.apply(lcb)
     lcd = lca + lcc
