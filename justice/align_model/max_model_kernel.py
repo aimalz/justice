@@ -79,8 +79,7 @@ def per_band_model_fn(band_features, params, debug_print=False):
     )
 
 
-def feature_model_fn(features, labels, params):
-    del labels  # unused
+def feature_model_fn(features, params):
     band_settings = band_settings_params.BandSettings.from_params(params)
     per_band_data = band_settings.per_band_sub_model_fn(
         per_band_model_fn, features, params=params

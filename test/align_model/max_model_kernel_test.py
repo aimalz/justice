@@ -84,7 +84,7 @@ def test_feature_model_fn():
         for band_name in ['a', 'b'] for key, value in get_band_features(band_name).items()
     }
     max_kernel_features = max_model_kernel.feature_model_fn(
-        features=as_tensors, labels=None, params=params
+        features=as_tensors, params=params
     )
     with tf.Session() as sess:
         max_kernel_features = sess.run(max_kernel_features)

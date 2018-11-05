@@ -47,6 +47,14 @@ class BandData(object):
         :param flux_err: Flux error values, 1-D np float array.
         """
         assert time.shape == flux.shape == flux_err.shape
+
+        if not np.issubdtype(time.dtype, np.floating):
+            raise ValueError(f"Time must be floating array, got {time!r}")
+        if not np.issubdtype(flux.dtype, np.floating):
+            raise ValueError(f"Flux must be floating array, got {flux!r}")
+        if not np.issubdtype(flux_err.dtype, np.floating):
+            raise ValueError(f"Flux_err must be floating array, got {flux_err!r}")
+
         self.time = time
         self.flux = flux
         self.flux_err = flux_err
