@@ -121,6 +121,14 @@ class _LC:
         """
         raise NotImplementedError()
 
+    def is_sane(self):
+        """Put any check here that is too expensive at runtime, but useful for debugging"""
+        sane = True
+        for name, band in self.bands.items():
+            band_is_sorted = (band.time[:-1] < band.time[1:]).all()
+            sane = sane and band_is_sorted
+        return sane
+
     def __repr__(self) -> str:
         kwargs = ', '.join([
             '{}={}'.format(band, data) for band, data in self.bands.items()
