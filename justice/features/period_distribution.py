@@ -14,16 +14,18 @@ from gatspy import periodic
 class MultiBandPeriod(collections.OrderedDict):
     __slots__ = (
         "period",
-        "best_period",
+        "best_periods",
     )
 
-    def __init__(self, *, period, band_to_power, best_period=None):
+    def __init__(self, *, period, band_to_power,
+                 best_periods=None, scores=None):
         super().__init__(band_to_power)
         # for value in self.values():
         #     assert isinstance(value, np.ndarray)
         #     assert len(value.shape) == 1, "Expected 1D shape per band."
         self.period = period
-        self.best_period = best_period
+        self.best_periods = best_periods
+        self.scores = scores
 
     def plot(self, band_name):
         import matplotlib.pyplot as plt
@@ -70,8 +72,6 @@ class IndependentLs(LsTransformBase):
 
 class MultiBandLs(LsTransformBase):
     """Runs gatspy multi-band LS.
-
-    However, this currently seems to give the same period distribution for all bands.
     """
 
     def apply(self, lc: lightcurve._LC) -> MultiBandPeriod:
@@ -87,13 +87,15 @@ class MultiBandLs(LsTransformBase):
             lambda name, band: np.full_like(band.time, name, dtype=str)
         )
 
-        model = periodic.LombScargleMultiband(fit_period=True)
+        model = periodic.LombScargleMultiband(fit_period=False)
         model.optimizer.period_range = (.1, np.max(times) - np.min(times))
+        model.optimizer.quiet = True
         model.fit(times, fluxes, flux_errs, bands)
-        power = model.periodogram(self.period)
+        period, power = model.periodogram_auto()
+        best_periods, scores = model.find_best_periods(5, return_scores=True)
         return MultiBandPeriod(
-            period=self.period,
+            period=period,
             band_to_power={name: power
                            for name in lc.bands.keys()},
-            best_period=model.best_period
+            best_periods=best_periods, scores=scores
         )
