@@ -1,6 +1,5 @@
 import abc
 import collections
-import math
 import typing
 import numpy as np
 import scipy.stats as sps
@@ -126,6 +125,14 @@ class _LC:
         """
         raise NotImplementedError()
 
+    def is_sane(self):
+        """Put any check here that is too expensive at runtime, but useful for debugging"""
+        sane = True
+        for name, band in self.bands.items():
+            band_is_sorted = (band.time[:-1] < band.time[1:]).all()
+            sane = sane and band_is_sorted
+        return sane
+
     def __repr__(self) -> str:
         kwargs = ', '.join([
             '{}={}'.format(band, data) for band, data in self.bands.items()
@@ -171,13 +178,14 @@ class LC2D:
     really mean "independent variables" and "dependent variables". So this class
     offers `invars` and `outvars` as arrays.
     """
+
     def __init__(self, pwav, time, flux, flux_err, detected):
         assert pwav.shape == time.shape
         assert time.shape == flux.shape
         assert flux.shape == flux_err.shape
         assert flux_err.shape == detected.shape
-        self._invars = np.array([pwav, time]).T
-        self._outvars = np.array([flux, flux_err]).T
+        self._invars = np.array([pwav, time])
+        self._outvars = np.array([flux, flux_err])
         self._detected = detected
 
     @property

@@ -11,6 +11,7 @@ import shutil
 import bcolz
 import pandas as pd
 import numpy as np
+import pathlib
 
 from justice import path_util
 
@@ -19,6 +20,8 @@ _root_dir = path_util.data_dir / 'plasticc_bcolz'
 
 class BcolzDataset(object):
     def __init__(self, bcolz_dir):
+        if isinstance(bcolz_dir, (str, bytes)):
+            bcolz_dir = pathlib.Path(bcolz_dir)
         self.bcolz_dir = bcolz_dir
 
         if not bcolz_dir.parent.is_dir():
