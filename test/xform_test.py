@@ -27,3 +27,11 @@ def test_independent_lc_xforms():
     lightcurve_test._assert_near(after.bands['b'].time, [9, 12])
     lightcurve_test._assert_near(after.bands['b'].flux, [28, 32])
     lightcurve_test._assert_near(after.bands['b'].flux_err, [2, 2])
+
+
+def test_band_name_mapper():
+    bnm = xform.BandNameMapper(b=400)
+    lc = simulate.TestLC.make_hard_gauss()
+    lc2d = bnm.make_lc2d(lc)
+    assert lc2d.invars.shape[0] == 2
+    assert lc2d.outvars.shape[0] == 2
