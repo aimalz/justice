@@ -1,6 +1,5 @@
 import abc
 import collections
-import math
 import typing
 import numpy as np
 import scipy.stats as sps
@@ -51,10 +50,13 @@ class BandData(object):
         times = np.concatenate((self.time, other.time))
         fluxes = np.concatenate((self.flux, other.flux))
         flux_errs = np.concatenate((self.flux_err, other.flux_err))
+        detecteds = np.concatenate((self.detected, other.detected))
 
         # tried kind='mergesort', but it wasn't any faster with 1e7 points
         ordinals = np.argsort(times)
-        return BandData(times[ordinals], fluxes[ordinals], flux_errs[ordinals])
+        return BandData(
+            times[ordinals], fluxes[ordinals], flux_errs[ordinals], detecteds[ordinals]
+        )
 
     @classmethod
     def from_cadence_shape_and_errfracs(cls, cadence, shape, errfracs):
@@ -72,8 +74,10 @@ class BandData(object):
         :return: Arc length measurement.
         """
         # ignores errorbars
-        time_diffs = self.time[1:] - self.time[:-1]
-        flux_diffs = self.flux[1:] - self.flux[:-1]
+        dettimes = self.time[self.detected == 1]
+        detfluxes = self.flux[self.detected == 1]
+        time_diffs = dettimes[1:] - dettimes[:-1]
+        flux_diffs = detfluxes[1:] - detfluxes[:-1]
         return float(np.sum(np.sqrt(time_diffs**2 + flux_diffs**2)))
 
     @classmethod
@@ -174,6 +178,7 @@ class LC2D:
     really mean "independent variables" and "dependent variables". So this class
     offers `invars` and `outvars` as arrays.
     """
+
     def __init__(self, pwav, time, flux, flux_err, detected):
         assert pwav.shape == time.shape
         assert time.shape == flux.shape

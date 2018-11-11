@@ -10,6 +10,7 @@ import pytest
 
 from justice.datasets import ogle_data_builder, ogle_data
 
+
 @pytest.mark.skip()
 def test_build_and_get_random(testdata_dir, tmpdir):
     ogle_dir = str(tmpdir.mkdir("test_ogle"))
