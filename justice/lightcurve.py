@@ -5,6 +5,28 @@ import numpy as np
 import scipy.stats as sps
 
 
+class BandPoint(object):
+    __slots__ = ('time', 'flux', 'flux_err', 'detected')
+
+    def __init__(self, time, flux, flux_err, detected):
+        self.time = time
+        self.flux = flux
+        self.flux_err = flux_err
+        self.detected = detected
+
+    def __repr__(self):
+        return (
+            f"BandPoint[time={self.time}, flux={self.flux}, "
+            f"flux_err={self.flux_err}, detected={self.detected}]"
+        )
+
+    def __eq__(self, other):
+        return (
+            self.time == other.time and self.flux == other.flux and
+            self.flux_err == other.flux_err and self.detected == other.detected
+        )
+
+
 class BandData(object):
     """Light curve data for a single band.
     """
@@ -25,6 +47,14 @@ class BandData(object):
         :param flux_err: Flux error values, 1-D np float array.
         """
         assert time.shape == flux.shape == flux_err.shape
+
+        if not np.issubdtype(time.dtype, np.floating):
+            raise ValueError(f"Time must be floating array, got {time!r}")
+        if not np.issubdtype(flux.dtype, np.floating):
+            raise ValueError(f"Flux must be floating array, got {flux!r}")
+        if not np.issubdtype(flux_err.dtype, np.floating):
+            raise ValueError(f"Flux_err must be floating array, got {flux_err!r}")
+
         self.time = time
         self.flux = flux
         self.flux_err = flux_err
@@ -56,6 +86,29 @@ class BandData(object):
         ordinals = np.argsort(times)
         return BandData(
             times[ordinals], fluxes[ordinals], flux_errs[ordinals], detecteds[ordinals]
+        )
+
+    def _masked(self, mask: np.ndarray):
+        return self.__class__(
+            time=self.time[mask],
+            flux=self.flux[mask],
+            flux_err=self.flux_err[mask],
+            detected=self.detected[mask],
+        )
+
+    def before_time(self, time: float):
+        return self._masked(self.time < time)
+
+    def after_time(self, time: float):
+        return self._masked(self.time > time)
+
+    def closest_point(self, time: float):
+        idx = np.argmin(np.abs(self.time - time))
+        return BandPoint(
+            time=self.time[idx],
+            flux=self.flux[idx],
+            flux_err=self.flux_err[idx],
+            detected=self.detected[idx],
         )
 
     @classmethod

@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 """Checks that IPython notebooks have been cleared."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-import glob
 import json
-import os.path
+import subprocess
 
-base_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "../.."))
+from justice import path_util
 
 
 def test_ipython_cleared():
-    notebooks = glob.glob(os.path.join(base_dir, "*.ipynb"))
-    assert len(notebooks) >= 2, "Couldn't find notebooks in {}".format(base_dir)
+    project_root = str(path_util.project_root)
+    notebooks = subprocess.check_output([
+        'git', 'ls-files', '*.ipynb'
+    ], cwd=project_root).decode("utf-8").strip().split("\n")
+    assert len(notebooks) >= 2, f"Couldn't find notebooks in {path_util.project_root}"
     for notebook in notebooks:
         with open(notebook) as f:
             contents = json.load(f)

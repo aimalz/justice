@@ -6,6 +6,7 @@ Note some functions are already in lightcurve.py's PlasticcDatasetLC class.
 import random
 import pathlib
 import sqlite3
+import typing
 
 import pandas as pd
 import numpy as np
@@ -76,6 +77,8 @@ class PlasticcDataset(object):
 
 
 class PlasticcBcolzSource(object):
+    _bcolz_cache = {}
+
     def __init__(self, bcolz_dir):
         self.bcolz_dir = bcolz_dir
         self.tables = {}
@@ -88,6 +91,17 @@ class PlasticcBcolzSource(object):
             self.tables[dataset] = bcolz_dataset.read_table()
         return self.tables[dataset]
 
+    @classmethod
+    def get_with_cache(cls, source):
+        source = str(source)  # in case a pathlib.Path
+        if source not in cls._bcolz_cache:
+            cls._bcolz_cache[source] = PlasticcBcolzSource(source)
+        return cls._bcolz_cache[source]
+
+    @classmethod
+    def get_default(cls):
+        return cls.get_with_cache(plasticc_bcolz._root_dir)
+
 
 class PlasticcDatasetLC(lightcurve._LC):
     metadata_keys = [
@@ -96,13 +110,6 @@ class PlasticcDatasetLC(lightcurve._LC):
     ]
 
     expected_bands = list('ugrizy')
-    _bcolz_cache = {}
-
-    @classmethod
-    def _get_bcolz_cache(cls, source):
-        if source not in cls._bcolz_cache:
-            cls._bcolz_cache[source] = PlasticcBcolzSource(source)
-        return cls._bcolz_cache[source]
 
     @classmethod
     def _get_band_from_raw(cls, conn, dataset, obj_id, band_id):
@@ -155,7 +162,9 @@ class PlasticcDatasetLC(lightcurve._LC):
         return lc
 
     @classmethod
-    def _bcolz_get_lcs(cls, bcolz_source: PlasticcBcolzSource, dataset: str, obj_ids):
+    def bcolz_get_lcs_by_obj_ids(
+        cls, bcolz_source: PlasticcBcolzSource, dataset: str, obj_ids: typing.List[int]
+    ) -> typing.List['PlasticcDatasetLC']:
         bcolz_table = bcolz_source.get_table(dataset)
         meta_table = bcolz_source.get_table(dataset + '_metadata')
         if not obj_ids:
@@ -165,7 +174,6 @@ class PlasticcDatasetLC(lightcurve._LC):
         bcolz_map = bcolz_table.where(query)
 
         df = pd.DataFrame.from_records(bcolz_map, columns=bcolz_table.names)
-        groupby = df.groupby(['object_id', 'passband'])
 
         all_raw_bands = {}
         for group in df.groupby(['object_id', 'passband']):
@@ -203,12 +211,12 @@ class PlasticcDatasetLC(lightcurve._LC):
             with sqlite3.connect(source) as conn:
                 return cls._sqlite_get_lc(conn, dataset, obj_id)
         elif isinstance(source, str) and 'plasticc_bcolz' in source:
-            source = cls._get_bcolz_cache(source)
-            maybe_lc = cls._bcolz_get_lcs(source, dataset, [obj_id])
+            source = PlasticcBcolzSource.get_with_cache(source)
+            maybe_lc = cls.bcolz_get_lcs_by_obj_ids(source, dataset, [obj_id])
             assert len(maybe_lc) == 1, "Did not find an LC of id {}".format(obj_id)
             return maybe_lc[0]
         elif isinstance(source, PlasticcBcolzSource):
-            maybe_lc = cls._bcolz_get_lcs(source, dataset, [obj_id])
+            maybe_lc = cls.bcolz_get_lcs_by_obj_ids(source, dataset, [obj_id])
             assert len(maybe_lc) == 1, "Did not find an LC of id {}".format(obj_id)
             return maybe_lc[0]
         else:
@@ -230,7 +238,7 @@ class PlasticcDatasetLC(lightcurve._LC):
         )
         obj_ids = [row.object_id for row in bcolz_meta_map]
 
-        return cls._bcolz_get_lcs(source, 'training_set', obj_ids)
+        return cls.bcolz_get_lcs_by_obj_ids(source, 'training_set', obj_ids)
 
     @classmethod
     def get_lcs_by_target(cls, source, target):
@@ -241,7 +249,7 @@ class PlasticcDatasetLC(lightcurve._LC):
             with sqlite3.connect(source) as conn:
                 return cls._sqlite_get_lcs_by_target(conn, target)
         elif isinstance(source, str) and 'plasticc_bcolz' in source:
-            source = cls._get_bcolz_cache(source)
+            source = PlasticcBcolzSource.get_with_cache(source)
             return cls._bcolz_get_lcs_by_target(source, target)
         elif isinstance(source, PlasticcBcolzSource):
             return cls._bcolz_get_lcs_by_target(source, target)
