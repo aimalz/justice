@@ -40,6 +40,9 @@ def masked_sigmoid(sigmoid_input, mask):
 
 
 def per_band_model_fn(band_features, params, debug_print=False):
+    # NOTE(gatoatigrado): dense_extracted_features.WindowFeatures provides a convenient
+    # API for many calculations here, but right now the unit test data for max_model_kernel_test
+    # does not provide time tensors, making it inconvenient to modernize this code.
     batch_size = params["batch_size"]
     window_size = params["window_size"]
     inv_eps = 1.0 / params["flux_scale_epsilon"]

@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 """Tests for raw value window features."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from justice import simulate
 from justice.features import raw_value_features, band_settings_params
 
@@ -24,3 +20,9 @@ def test_basic_extraction():
     assert second_point_features['band_b.after_padding'] == 4
     assert second_point_features['band_b.closest_time_diff'] == 0
     assert second_point_features['band_b.before_flux'].tolist() == [0, 0, 0, 5]
+
+    time_delta = (
+        second_point_features['band_b.closest_time'] -
+        second_point_features['band_b.before_time']
+    )
+    assert time_delta.tolist()[-1] == 1.0

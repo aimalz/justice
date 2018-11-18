@@ -52,6 +52,7 @@ class RawValueExtractor(object):
             "after_time": self._window_pad_right(after.time, after_pad),
             "after_flux": self._window_pad_right(after.flux, after_pad),
             "after_padding": after_pad,
+            "closest_time": closest.time,
             "closest_flux": closest.flux,
             "closest_time_diff": abs(closest.time - time),
         }
