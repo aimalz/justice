@@ -4,6 +4,7 @@ import tensorflow as tf
 import pytest
 import numpy
 
+
 def test_gen_pairs():
     generators = [
         itertools.repeat('a'),
@@ -12,12 +13,12 @@ def test_gen_pairs():
     ]
     g = lc_id_features._gen_pairs(generators)
     allowed = {
-        ('a','b'),
-        ('b','a'),
-        ('a','c'),
-        ('c','a'),
-        ('b','c'),
-        ('c','b'),
+        ('a', 'b'),
+        ('b', 'a'),
+        ('a', 'c'),
+        ('c', 'a'),
+        ('b', 'c'),
+        ('c', 'b'),
     }
     seen = set()
     for i in range(1000):
@@ -25,6 +26,7 @@ def test_gen_pairs():
         assert n in allowed
         seen.add(n)
     assert seen == allowed
+
 
 @pytest.mark.requires_real_data
 def test_get_negative_pairs_dataset():
