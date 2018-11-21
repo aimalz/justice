@@ -10,7 +10,7 @@ from justice import lightcurve
 def auto_dtype(key, value):
     if isinstance(value, np.ndarray) and np.issubdtype(value.dtype, np.floating):
         return tf.float32
-    elif isinstance(value, float):
+    elif isinstance(value, (float, np.floating)):
         return tf.float32
     elif '_padding' in key:
         assert isinstance(
@@ -18,8 +18,10 @@ def auto_dtype(key, value):
         ) or (isinstance(value, np.ndarray) and np.issubdtype(value.dtype, np.integer))
         return tf.int32
     else:
+        typ = type(value.dtype)
         raise ValueError(
-            f"Unrecognized data type for key {key!r}, value {value.dtype!r}")
+            f"Unrecognized data type for key {key!r}, value {value.dtype!r} ({typ})"
+        )
 
 
 def auto_shape(value):
