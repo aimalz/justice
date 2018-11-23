@@ -22,7 +22,7 @@ def test_basic_extraction():
     assert second_point_features['band_b.before_flux'].tolist() == [0, 0, 0, 5]
 
     time_delta = (
-        second_point_features['band_b.closest_time'] -
+        second_point_features['band_b.closest_time_in_band'] -
         second_point_features['band_b.before_time']
     )
     assert time_delta.tolist()[-1] == 1.0

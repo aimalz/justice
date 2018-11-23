@@ -20,8 +20,8 @@ def test_extraction():
     band_settings = band_settings_params.BandSettings(bands=['b'])
     fex = raw_value_features.RawValueExtractor(
         window_size=4, band_settings=band_settings)
-    first_point_features = fex.extract(lc, 2)
-    second_point_features = fex.extract(lc, 3)
+    first_point_features = fex.extract(lc, 1.9)
+    second_point_features = fex.extract(lc, 3.0)
 
     with tf.Graph().as_default() as g:
         dataset1 = tf.data.Dataset.from_tensors(first_point_features)
@@ -32,15 +32,27 @@ def test_extraction():
             band_features=band_settings.get_band_features(inp, band_name='b'),
             batch_size=2,
             window_size=4,
+            band_time_diff=0.2,
         )
         before_flux = inp['band_b.before_flux']
         dflux_dt = window_features.dflux_dt(clip_magnitude=7.0)
         dflux_dt_masked = window_features.masked(dflux_dt, 0, [])
+
+        # Variation where each band has to be sampled within a very strict tolerance.
+        window_features_strict = dense_extracted_features.WindowFeatures(
+            band_features=band_settings.get_band_features(inp, band_name='b'),
+            batch_size=2,
+            window_size=4,
+            band_time_diff=0.01,
+        )
+        dflux_dt_masked_strict = window_features_strict.masked(dflux_dt, 0, [])
+
         with tf.Session(graph=g) as sess:
             values = sess.run({
                 'before_flux': before_flux,
                 'dflux_dt': dflux_dt,
-                'dflux_dt_masked': dflux_dt_masked
+                'dflux_dt_masked': dflux_dt_masked,
+                'dflux_dt_masked_strict': dflux_dt_masked_strict
             })
             values = {k: v.tolist() for k, v in values.items()}
 
@@ -49,5 +61,7 @@ def test_extraction():
         'dflux_dt': [[2.5, 2.5, 2.5, 2.5, 1.0, 2.5, 2.5, 2.5],
                      [2.0, 2.0, 2.0, 1.0, 2.0, 2.0, 2.0, 2.0]],
         'dflux_dt_masked': [[0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
+                            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]],
+        'dflux_dt_masked_strict': [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]],
     }

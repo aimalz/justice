@@ -23,7 +23,7 @@ def test_per_band_model_fn_not_max():
         "before_flux": [0, 0, 0, 1, 2, 1],
         "after_flux": [0.5, 0.1, 0, 0, 0, 0],
         "after_padding": 4,
-        "closest_flux": 0.75,
+        "closest_flux_in_band": 0.75,
     }
     params = {
         "batch_size": 1,
@@ -46,7 +46,7 @@ def test_per_band_model_fn_is_max():
         "before_flux": [0, 0, 0, 1, 2, 1],
         "after_flux": [0.5, 0.1, 0, 0, 0, 0],
         "after_padding": 4,
-        "closest_flux": 2.75,
+        "closest_flux_in_band": 2.75,
     }
     params = {
         "batch_size": 1,
@@ -70,7 +70,7 @@ def test_feature_model_fn():
             "before_flux": [0, 0, 0, 1, 2, 1],
             "after_flux": [0.5, 0.1, 0, 0, 0, 0],
             "after_padding": 4,
-            "closest_flux": 0.75 if band_name == 'a' else 2.75
+            "closest_flux_in_band": 0.75 if band_name == 'a' else 2.75
         }
 
     params = {
