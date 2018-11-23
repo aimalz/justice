@@ -30,7 +30,7 @@ def test_bcolz_nonsense_2():
     source = plasticc_data.PlasticcBcolzSource.get_default()
     try:
         plasticc_data.PlasticcDatasetLC.get_lc(source, 'training_set', -8675309)
-    except AssertionError:
+    except KeyError:
         pass
 
 

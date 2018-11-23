@@ -3,6 +3,8 @@
 
 Note some functions are already in lightcurve.py's PlasticcDatasetLC class.
 """
+import bcolz
+import pickle
 import random
 import pathlib
 import sqlite3
@@ -80,16 +82,39 @@ class PlasticcBcolzSource(object):
     _bcolz_cache = {}
 
     def __init__(self, bcolz_dir):
-        self.bcolz_dir = bcolz_dir
+        self.bcolz_dir = pathlib.Path(bcolz_dir)
         self.tables = {}
+        self.pandas_indices = {}  # (name, column) -> pd.DataFrame
 
-    def get_table(self, dataset):
-        if dataset not in self.tables:
-            bcolz_dataset = plasticc_bcolz.BcolzDataset(
-                pathlib.Path(self.bcolz_dir) / dataset
-            )
-            self.tables[dataset] = bcolz_dataset.read_table()
-        return self.tables[dataset]
+    def get_table(self, table_name):
+        if table_name not in self.tables:
+            bcolz_dataset = plasticc_bcolz.BcolzDataset(self.bcolz_dir / table_name)
+            self.tables[table_name] = bcolz_dataset.read_table()
+        return self.tables[table_name]
+
+    def get_pandas_index(self, table_name, column_name="object_id") -> pd.DataFrame:
+        """Loads index table from bcolz to in-memory Pandas data frame.
+
+        Takes a few hundred ms for ~3.5M rows, and a few fundred more on the first
+        index lookup (use .loc[key]). Afterwards it should be super fast.
+
+        :param table_name: Name of original bcolz table, e.g. "test_set"
+        :param column_name: Name of column used as an index, usually "object_id"
+        :return: DataFrame with the column set as its index.
+        """
+        index_dirname = self.bcolz_dir / f"{table_name}__{column_name}_index"
+        if (table_name, column_name) not in self.pandas_indices:
+            if not index_dirname.is_dir():
+                raise EnvironmentError(
+                    "Please run bcolz_generate_sorted_index (refer to "
+                    "README_bcolz.md)."
+                )
+            table = bcolz.open(str(index_dirname))
+            df = pd.DataFrame({k: table[k][:]
+                               for k in set(table.names) - {column_name}},
+                              index=table[column_name][:])
+            self.pandas_indices[(table_name, column_name)] = df
+        return self.pandas_indices[(table_name, column_name)]
 
     @classmethod
     def get_with_cache(cls, source):
@@ -165,32 +190,35 @@ class PlasticcDatasetLC(lightcurve._LC):
     def bcolz_get_lcs_by_obj_ids(
         cls, bcolz_source: PlasticcBcolzSource, dataset: str, obj_ids: typing.List[int]
     ) -> typing.List['PlasticcDatasetLC']:
+        index_table = bcolz_source.get_pandas_index(dataset)
         bcolz_table = bcolz_source.get_table(dataset)
         meta_table = bcolz_source.get_table(dataset + '_metadata')
         if not obj_ids:
             return []
+
+        lcs = {}
+        try:
+            index_rows = index_table.loc[obj_ids].itertuples()
+        except KeyError as e:
+            raise KeyError(
+                "Couldn't find requested object IDs in index! Original error: {!r}".
+                format(e)
+            )
+        for object_id, index_row in zip(obj_ids, index_rows):
+            subsel = bcolz_table[index_row.start_idx:index_row.end_idx]
+            df = pd.DataFrame(subsel, columns=bcolz_table.names)
+            raw_bands = [None] * len(cls.expected_bands)
+            for passband, df_chunk in df.groupby('passband'):
+                raw_bands[passband] = lightcurve.BandData(
+                    np.array(df_chunk['mjd']),
+                    np.array(df_chunk['flux']),
+                    np.array(df_chunk['flux_err']),
+                    np.array(df_chunk['detected']),
+                )
+            lcs[object_id] = cls(**dict(zip(cls.expected_bands, raw_bands)))
+
         query_parts = ['(object_id == {})'.format(obj_id) for obj_id in obj_ids]
         query = ' | '.join(query_parts)
-        bcolz_map = bcolz_table.where(query)
-
-        df = pd.DataFrame.from_records(bcolz_map, columns=bcolz_table.names)
-
-        all_raw_bands = {}
-        for group in df.groupby(['object_id', 'passband']):
-            (object_id, passband), df_chunk = group
-            if object_id not in all_raw_bands:
-                all_raw_bands[object_id] = [None] * len(cls.expected_bands)
-            all_raw_bands[object_id][passband] = lightcurve.BandData(
-                np.array(df_chunk['mjd']),
-                np.array(df_chunk['flux']),
-                np.array(df_chunk['flux_err']),
-                np.array(df_chunk['detected']),
-            )
-        lcs = {}
-        for object_id, bands in all_raw_bands.items():
-            assert None not in bands, "If raw data is missing whole bands, then we have to rethink things"
-            lcs[object_id] = cls(**dict(zip(cls.expected_bands, bands)))
-
         bcolz_meta_map = meta_table.where(query)
 
         object_id_name_index = meta_table.names.index('object_id')
