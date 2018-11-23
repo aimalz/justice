@@ -48,7 +48,9 @@ def per_band_model_fn(band_features, params, debug_print=False):
     inv_eps = 1.0 / params["flux_scale_epsilon"]
     graph_typecheck.assert_shape(band_features["before_padding"], [batch_size])
     graph_typecheck.assert_shape(band_features["after_padding"], [batch_size])
-    graph_typecheck.assert_shape(band_features["closest_flux"], [batch_size])
+    closest_flux = graph_typecheck.assert_shape(
+        band_features["closest_flux_in_band"], [batch_size]
+    )
 
     before_flux = graph_typecheck.assert_shape(
         band_features["before_flux"], [batch_size, window_size]
@@ -59,11 +61,11 @@ def per_band_model_fn(band_features, params, debug_print=False):
 
     # Return a soft-greater-than operator, product that all scores are greater.
     is_greater_than_before = masked_sigmoid(
-        inv_eps * (tf.expand_dims(band_features["closest_flux"], axis=1) - before_flux),
+        inv_eps * (tf.expand_dims(closest_flux, axis=1) - before_flux),
         _left_mask(band_features["before_padding"], window_size)
     )
     is_greater_than_after = masked_sigmoid(
-        inv_eps * (tf.expand_dims(band_features["closest_flux"], axis=1) - after_flux),
+        inv_eps * (tf.expand_dims(closest_flux, axis=1) - after_flux),
         _right_mask(band_features["after_padding"], window_size)
     )
     graph_typecheck.assert_shape(is_greater_than_before, [batch_size, window_size])

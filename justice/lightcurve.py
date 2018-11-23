@@ -88,7 +88,7 @@ class BandData(object):
             times[ordinals], fluxes[ordinals], flux_errs[ordinals], detecteds[ordinals]
         )
 
-    def _masked(self, mask: np.ndarray):
+    def _masked(self, mask: np.ndarray) -> 'BandData':
         return self.__class__(
             time=self.time[mask],
             flux=self.flux[mask],
@@ -96,11 +96,25 @@ class BandData(object):
             detected=self.detected[mask],
         )
 
-    def before_time(self, time: float):
-        return self._masked(self.time < time)
+    def before_time(self, time: float, bias: float = 1e-8) -> 'BandData':
+        """Gets all points strictly before 'time - bias'.
 
-    def after_time(self, time: float):
-        return self._masked(self.time > time)
+        :param time: Desired time to sample around, for windowed features.
+        :param bias: Bias that can be positive, to exclude points close to the desired time,
+            or negative, to include the desired time (and possibly points near it).
+        :return: Instance of the same class, with some data masked.
+        """
+        return self._masked(self.time + bias < time)
+
+    def after_time(self, time: float, bias: float = 1e-8) -> 'BandData':
+        """Gets all points strictly after 'time + bias'.
+
+        :param time: Desired time to sample around, for windowed features.
+        :param bias: Bias that can be positive, to exclude points close to the desired time,
+            or negative, to include the desired time (and possibly points near it).
+        :return: Instance of the same class, with some data masked.
+        """
+        return self._masked(self.time > time + bias)
 
     def closest_point(self, time: float):
         idx = np.argmin(np.abs(self.time - time))
@@ -162,6 +176,7 @@ class _LC:
         for k in bands:
             assert k in self.expected_bands
         self.bands = d
+        self.meta: dict = {}  # Free-form dict of metadata.
 
     @property
     def nbands(self) -> int:
