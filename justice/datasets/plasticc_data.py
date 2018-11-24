@@ -4,7 +4,6 @@
 Note some functions are already in lightcurve.py's PlasticcDatasetLC class.
 """
 import bcolz
-import pickle
 import random
 import pathlib
 import sqlite3
