@@ -81,6 +81,32 @@ class PerPointDatasetGenerator(object):
             num_non_padding=len(times)
         )
 
+    def make_dataset_lcs(self, lcs: typing.List[lightcurve._LC]) -> tf.data.Dataset:
+        """Inefficient function to make a dataset."""
+        first_lc_times = np.unique(np.concatenate(lcs[0].all_times(), axis=0))
+        first_features = dict(
+            self.extract_fcn(lcs[0], first_lc_times[0]), time=first_lc_times[0]
+        )
+        dtypes = {key: auto_dtype(key, value) for key, value in first_features.items()}
+        shapes = {key: auto_shape(value) for key, value in first_features.items()}
+
+        def gen(lc):
+            times = np.unique(np.concatenate(lc.all_times(), axis=0))
+            for time in times:
+                extracted_dict = self.extract_fcn(lc, time)
+                extracted_dict['time'] = time
+                yield extracted_dict
+
+        def gen_all():
+            for lc in lcs:
+                yield from gen(lc)
+
+        return tf.data.Dataset.from_generator(
+            gen_all, output_types=dtypes, output_shapes=shapes
+        ).batch(
+            self.batch_size, drop_remainder=True
+        )
+
     def predict_single_lc(
         self, estimator: tf.estimator.Estimator, lc: lightcurve._LC, arrays_to_list=True
     ):
