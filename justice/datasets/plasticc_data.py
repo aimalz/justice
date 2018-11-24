@@ -189,6 +189,12 @@ class PlasticcDatasetLC(lightcurve._LC):
     def bcolz_get_lcs_by_obj_ids(
         cls, bcolz_source: PlasticcBcolzSource, dataset: str, obj_ids: typing.List[int]
     ) -> typing.List['PlasticcDatasetLC']:
+        """Gets a list of light curves by object_id.
+
+        :param bcolz_source: Data source instance, usually PlasticcBcolzSource.get_default().
+        :param dataset: Name of the dataset, usually 'test_set' or 'training_set'.
+        :param obj_ids: List of IDs. Should be unique, but seems to work OK otherwise.
+        """
         index_table = bcolz_source.get_pandas_index(dataset)
         bcolz_table = bcolz_source.get_table(dataset)
         meta_table = bcolz_source.get_table(dataset + '_metadata')
@@ -205,29 +211,26 @@ class PlasticcDatasetLC(lightcurve._LC):
             )
         for object_id, index_row in zip(obj_ids, index_rows):
             subsel = bcolz_table[index_row.start_idx:index_row.end_idx]
-            df = pd.DataFrame(subsel, columns=bcolz_table.names)
-            raw_bands = [None] * len(cls.expected_bands)
-            for passband, df_chunk in df.groupby('passband'):
-                raw_bands[passband] = lightcurve.BandData(
-                    np.array(df_chunk['mjd']),
-                    np.array(df_chunk['flux']),
-                    np.array(df_chunk['flux_err']),
-                    np.array(df_chunk['detected']),
+            bands = {}
+            for band_idx, band_name in enumerate(cls.expected_bands):
+                passband_sel = subsel[subsel['passband'] == band_idx]
+                bands[band_name] = lightcurve.BandData(
+                    passband_sel['mjd'],
+                    passband_sel['flux'],
+                    passband_sel['flux_err'],
+                    passband_sel['detected'],
                 )
-            lcs[object_id] = cls(**dict(zip(cls.expected_bands, raw_bands)))
+            lcs[object_id] = cls(**bands)
 
-        query_parts = ['(object_id == {})'.format(obj_id) for obj_id in obj_ids]
-        query = ' | '.join(query_parts)
-        bcolz_meta_map = meta_table.where(query)
+        meta_object_ids = meta_table['object_id'][:]
+        meta_row_mask = np.isin(meta_object_ids, obj_ids, assume_unique=True)
+        meta_rows = meta_table[meta_row_mask]
 
         object_id_name_index = meta_table.names.index('object_id')
-        for meta_row in bcolz_meta_map:
+        for meta_row in meta_rows:
             obj_id = meta_row[object_id_name_index]
             lc = lcs[obj_id]
-            lc.meta = {}
-            for column_idx, column_name in enumerate(meta_table.names):
-                lc.meta[column_name] = meta_row[column_idx]
-
+            lc.meta = dict(zip(meta_table.names, meta_row))
         return list(lcs.values())
 
     @classmethod
