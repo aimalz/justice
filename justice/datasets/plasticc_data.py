@@ -290,15 +290,14 @@ class PlasticcDatasetLC(lightcurve._LC):
 
     @classmethod
     def get_bandnamemapper(cls):
-        # THESE ARE NOT THE REAL NUMBERS ALEX PLEASE FIX!! -davyd
         return xform.BandNameMapper(
             **{
-                'u': 300.,
-                'g': 400.,
-                'r': 500.,
-                'i': 600.,
-                'z': 700.,
-                'y': 800
+                'u': 368.55,
+                'g': 484.45,
+                'r': 622.95,
+                'i': 753.55,
+                'z': 868.6500000000001,
+                'y': 967.8499999999999
             }
         )
 
