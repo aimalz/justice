@@ -86,8 +86,6 @@ def plot_lcs(
 
     period_per_lc: List[period_distribution.MultiBandPeriod] = []
     if plot_period:
-        if period_transform is None:
-            period_transform = period_distribution.IndependentLs()
         period_per_lc = list(map(period_transform.apply, lcs))
 
     fig, ax = plt.subplots(
@@ -120,19 +118,14 @@ def plot_lcs(
                 marker='.'
             )
 
-        #ax[i, 0].set_ylabel('flux')
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
             if plot_period:
                 ax[i, 1].set_xlabel('period')
 
         if plot_period:
-            # for lc in lcs:
-            #power = astropy.stats.LombScargle(lc.bands[b].time, lc.bands[b].flux, lc.bands[b].flux_err).power(period)
-            #ax[i, 1].plot(period, power)
             for multi_band_period in period_per_lc:
                 ax[i, 1].plot(multi_band_period.period, multi_band_period[b])
-                #ax[i, 1].semilogx()
 
     plt.ylabel(b).set_rotation(0)
     plt.xlabel('time')
