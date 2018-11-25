@@ -1,6 +1,5 @@
 """Tools for summarizing lightcurve data into statistics"""
 
-import GPy
 import numpy as np
 import scipy.optimize as spo
 from tensorflow.contrib.framework import nest
