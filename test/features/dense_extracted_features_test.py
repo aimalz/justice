@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Tests extracted featuers"""
+import pytest
 import tensorflow as tf
 
 from justice import simulate
-from justice.features import raw_value_features, band_settings_params, dense_extracted_features
+from justice.datasets import plasticc_data
+from justice.features import raw_value_features, band_settings_params, dense_extracted_features, per_point_dataset
 
 
 def test_extraction():
@@ -65,3 +67,62 @@ def test_extraction():
         'dflux_dt_masked_strict': [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                                    [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]],
     }
+
+
+@pytest.mark.requires_real_data
+def test_dense_feature_extraction():
+    source = plasticc_data.PlasticcBcolzSource.get_default()
+    lc, = plasticc_data.PlasticcDatasetLC.bcolz_get_lcs_by_obj_ids(
+        bcolz_source=source, dataset="training_set", obj_ids=[1598]
+    )
+
+    def model_fn(features, labels, mode, params):
+        del labels  # unused
+        band_settings = band_settings_params.BandSettings.from_params(params)
+        results = dense_extracted_features.feature_model_fn(features, params)
+        by_band = tf.unstack(results, axis=4)
+        predictions = {
+            band: tensor for band,
+            tensor in zip(
+                band_settings.bands,
+                by_band)}
+        predictions["time"] = features["time"]
+        return tf.estimator.EstimatorSpec(
+            mode=mode,
+            predictions=predictions,
+            loss=tf.constant(0.0),
+            train_op=tf.no_op()
+        )
+
+    window_size = 10
+    rve = raw_value_features.RawValueExtractor(
+        window_size=window_size,
+        band_settings=band_settings_params.BandSettings(lc.expected_bands)
+    )
+    data_gen = per_point_dataset.PerPointDatasetGenerator(
+        extract_fcn=rve.extract,
+        batch_size=5,
+    )
+
+    estimator = tf.estimator.Estimator(
+        model_fn=model_fn,
+        params={
+            'batch_size': 5,
+            'window_size': window_size,
+            'flux_scale_epsilon': 0.5,
+            'lc_bands': lc.expected_bands,
+        }
+    )
+    predictions = list(data_gen.predict_single_lc(estimator, lc, arrays_to_list=False))
+    array = predictions[100]['y']
+    assert array.shape == (
+        20, 3, 32
+    )  # 2 * window_size, channels (dflux/dt, dflux, dtime), nbands
+    time_array = array[:, 2, :]
+    # Should be monotonically increasing as the window shifts, since WindowFeatures
+    # computes (point in window time) - (selected time). Should be monotonically
+    # decreasing along bins, since each bin fuzzily represents whether the actual value is
+    # greater than the bin's center value. As the bin centers increase, these fuzzy
+    # greater than values should decrease.
+    assert (time_array[1:, :] >= time_array[:-1, :]).all()
+    assert (time_array[:, 1:] <= time_array[:, :-1]).all()

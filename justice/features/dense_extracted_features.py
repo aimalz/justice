@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 """Extracts dense features with linear transformations."""
+import json
+import pathlib
 import typing
 
+import numpy as np
 import tensorflow as tf
 
+from justice import path_util
 from justice.align_model import graph_typecheck
+from justice.features import band_settings_params
 
 
 def _left_mask(before_padding, window_size):
@@ -147,3 +152,148 @@ def initial_layer(
                              axis=2,
                              name="initial_layer_concat")
     return features
+
+
+class CutoffData:
+    def __init__(self, config_json: dict):
+        self.window_size: int = config_json["window_size"]
+        self.band_time_diff: int = config_json["band_time_diff"]
+        self.embedding_size: int = config_json["desired_num_cutoffs"]
+        self.models_by_band = {}
+        for solution in config_json["solutions"]:
+            band = solution["band"]
+            self.models_by_band.setdefault(band, {})
+            self.models_by_band[band][solution["column"]] = (
+                solution["median_scale"],
+                solution["cutoffs"],
+            )
+
+    def dflux_dt_dflux_dtime_scales(self, band: str, dtype=np.float32):
+        """Generates a vector of scalar offsets.
+
+        :param band: Band name.
+        :param dtype: Data type of output array.
+        :return: <dtype>[3] matrix of scales per channel.
+        """
+        return np.array([
+            self.models_by_band[band]["dflux_dt"][0],
+            self.models_by_band[band]["dflux"][0],
+            self.models_by_band[band]["dtime"][0],
+        ],
+            dtype=dtype)
+
+    def dflux_dt_dflux_dtime_cutoffs(self, band: str, dtype=np.float32):
+        """Generates a matrix of [dflux_dt, dflux, dtime].
+
+        :param band: Band name.
+        :param dtype: Data type of output array.
+        :return: <dtype>[3, self.embedding_size] matrix of cutoffs.
+        """
+        return np.array([
+            self.models_by_band[band]["dflux_dt"][1],
+            self.models_by_band[band]["dflux"][1],
+            self.models_by_band[band]["dtime"][1],
+        ],
+            dtype=dtype)
+
+    @classmethod
+    def from_file(cls, filename: pathlib.Path):
+        if not filename.is_file():
+            raise EnvironmentError(
+                "Please generate tf_align_model data using the tf_align_model_input_"
+                "feature_percentiles.ipynb notebook or clone https://github.com/"
+                "gatoatigrado/plasticc-generated-data into data/tf_align_model."
+            )
+        with open(str(filename)) as f:
+            return cls(json.load(f))
+
+
+def initial_layer_binned(
+    initial_layer_features: tf.Tensor,
+    cutoff_data: CutoffData,
+    band: str,
+    nonlinearity=tf.sigmoid
+):
+    batch_size, twice_window_size, channels = map(int, initial_layer_features.shape)
+    if channels == 3:
+        scales = cutoff_data.dflux_dt_dflux_dtime_scales(band)
+        cutoffs = cutoff_data.dflux_dt_dflux_dtime_cutoffs(band)
+
+        cutoffs_batch_window = tf.expand_dims(tf.expand_dims(cutoffs, 0), 0)
+        scales_batch_window = tf.expand_dims(
+            tf.expand_dims(tf.expand_dims(scales, 0), 0), -1
+        )
+        init_layer_per_cutoff = tf.expand_dims(initial_layer_features, -1)
+        graph_typecheck.assert_shape(
+            cutoffs_batch_window, [1, 1, channels, cutoff_data.embedding_size]
+        )
+        graph_typecheck.assert_shape(scales_batch_window, [1, 1, channels, 1])
+        graph_typecheck.assert_shape(
+            init_layer_per_cutoff, [batch_size, twice_window_size, channels, 1]
+        )
+        result = nonlinearity(
+            (init_layer_per_cutoff - cutoffs_batch_window) / scales_batch_window
+        )
+        return graph_typecheck.assert_shape(
+            result, [batch_size, twice_window_size, channels, cutoff_data.embedding_size]
+        )
+    else:
+        raise NotImplementedError(f"{channels}-size data not implemented.")
+
+
+def cutoff_data_for_window_size(window_size):
+    if window_size == 10:
+        cutoff_data = CutoffData.from_file(
+            path_util.tf_align_data / 'feature_extraction' /
+            'cutoffs__window_sz-10__2018-11-23.json'
+        )
+    else:
+        raise ValueError("No supported cutoff data for window size")
+    return cutoff_data
+
+
+def initial_layer_binned_defaults(
+    band_features: dict,
+    band: str,
+    batch_size: int,
+    window_size: int,
+    value_if_masked: float = 0.0
+):
+    cutoff_data = cutoff_data_for_window_size(window_size)
+    wf = WindowFeatures(band_features, batch_size=batch_size, window_size=window_size)
+    init_layer = initial_layer(wf, include_flux_and_time=True)
+    binned = initial_layer_binned(init_layer, cutoff_data=cutoff_data, band=band)
+    masked = wf.masked(
+        binned,
+        value_if_masked=value_if_masked,
+        expected_extra_dims=[3, cutoff_data.embedding_size]
+    )
+    return masked
+
+
+def per_band_model_fn(band_features, band_name, params, value_if_masked: float = 0.0):
+    batch_size = params["batch_size"]
+    window_size = params["window_size"]
+    return initial_layer_binned_defaults(
+        band_features,
+        band=band_name,
+        batch_size=batch_size,
+        window_size=window_size,
+        value_if_masked=value_if_masked
+    )
+
+
+def feature_model_fn(features, params):
+    band_settings = band_settings_params.BandSettings.from_params(params)
+    per_band_data = band_settings.per_band_sub_model_fn_with_band_name(
+        per_band_model_fn, features, params=params
+    )
+    return graph_typecheck.assert_shape(
+        tf.stack(per_band_data, axis=4), [
+            params["batch_size"],
+            2 * params["window_size"],
+            3,
+            cutoff_data_for_window_size(params["window_size"]).embedding_size,
+            band_settings.nbands,
+        ]
+    )
