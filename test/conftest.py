@@ -10,6 +10,7 @@ import shutil
 import tempfile
 
 import pytest
+import tensorflow as tf
 
 # noinspection PyTrailingSemicolon
 import matplotlib; matplotlib.use("Agg")  # noqa, yapf: disable
@@ -54,3 +55,10 @@ def sn_dataset(sn_index_and_mmap_file):
     return supernova_data.SNDataset(
         override_index_filename=index_filename, override_all_lc_data=lc_data
     )
+
+
+@pytest.fixture(scope="function")
+def tf_sess():
+    with tf.Graph().as_default() as g:
+        with tf.Session(graph=g) as sess:
+            yield sess

@@ -201,9 +201,8 @@ class CutoffData:
         if not filename.is_file():
             raise EnvironmentError(
                 "Please generate tf_align_model data using the tf_align_model_input_"
-                "feature_percentiles.ipynb notebook or clone https://github.com/"
-                "gatoatigrado/plasticc-generated-data into data/tf_align_model."
-            )
+                "feature_percentiles.ipynb notebook or run `git clone https://github.com/"
+                "gatoatigrado/plasticc-generated-data data/tf_align_model`.")
         with open(str(filename)) as f:
             return cls(json.load(f))
 
