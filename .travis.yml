@@ -10,6 +10,7 @@ install:
   - pip install george
   - pip install gpy
   - pip install astropy --no-deps
+  - pip install bcolz
   - pip install gatspy
   # Temporal solution to travis issue #155
   # - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm

@@ -67,3 +67,15 @@ python -m justice.datasets.extract_downloaded \
     --key-file datadist_keyfile.key \
     --encrypted-file plasticc_bcolz.tar.enc
 ```
+
+## Generating fast indices
+
+Since object IDs are contiguous in the light curve tables, we can generate even faster lookup tables.
+Run,
+
+```
+for t in test_set training_set; do
+    python -m justice.datasets.bcolz_generate_sorted_index \
+        --table-name $t --column-name object_id
+done
+```

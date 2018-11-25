@@ -57,9 +57,9 @@ class TestLC(lightcurve._LC):
 
     @classmethod
     def make_super_easy(cls, time=None):
-        time = time if time is not None else np.array([2, 3])
+        time = time if time is not None else np.array([2.0, 3.0])
         band = lightcurve.BandData(
-            time=time, flux=np.array([5, 6]), flux_err=np.array([1, 1])
+            time=time, flux=np.array([5.0, 6.0]), flux_err=np.array([1.0, 1.0])
         )
         return TestLC(b=band)
 

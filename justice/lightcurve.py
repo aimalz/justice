@@ -1,9 +1,30 @@
 import abc
 import collections
-import math
 import typing
 import numpy as np
 import scipy.stats as sps
+
+
+class BandPoint(object):
+    __slots__ = ('time', 'flux', 'flux_err', 'detected')
+
+    def __init__(self, time, flux, flux_err, detected):
+        self.time = time
+        self.flux = flux
+        self.flux_err = flux_err
+        self.detected = detected
+
+    def __repr__(self):
+        return (
+            f"BandPoint[time={self.time}, flux={self.flux}, "
+            f"flux_err={self.flux_err}, detected={self.detected}]"
+        )
+
+    def __eq__(self, other):
+        return (
+            self.time == other.time and self.flux == other.flux and
+            self.flux_err == other.flux_err and self.detected == other.detected
+        )
 
 
 class BandData(object):
@@ -26,6 +47,14 @@ class BandData(object):
         :param flux_err: Flux error values, 1-D np float array.
         """
         assert time.shape == flux.shape == flux_err.shape
+
+        if not np.issubdtype(time.dtype, np.floating):
+            raise ValueError(f"Time must be floating array, got {time!r}")
+        if not np.issubdtype(flux.dtype, np.floating):
+            raise ValueError(f"Flux must be floating array, got {flux!r}")
+        if not np.issubdtype(flux_err.dtype, np.floating):
+            raise ValueError(f"Flux_err must be floating array, got {flux_err!r}")
+
         self.time = time
         self.flux = flux
         self.flux_err = flux_err
@@ -57,6 +86,43 @@ class BandData(object):
         ordinals = np.argsort(times)
         return BandData(
             times[ordinals], fluxes[ordinals], flux_errs[ordinals], detecteds[ordinals]
+        )
+
+    def _masked(self, mask: np.ndarray) -> 'BandData':
+        return self.__class__(
+            time=self.time[mask],
+            flux=self.flux[mask],
+            flux_err=self.flux_err[mask],
+            detected=self.detected[mask],
+        )
+
+    def before_time(self, time: float, bias: float = 1e-8) -> 'BandData':
+        """Gets all points strictly before 'time - bias'.
+
+        :param time: Desired time to sample around, for windowed features.
+        :param bias: Bias that can be positive, to exclude points close to the desired time,
+            or negative, to include the desired time (and possibly points near it).
+        :return: Instance of the same class, with some data masked.
+        """
+        return self._masked(self.time + bias < time)
+
+    def after_time(self, time: float, bias: float = 1e-8) -> 'BandData':
+        """Gets all points strictly after 'time + bias'.
+
+        :param time: Desired time to sample around, for windowed features.
+        :param bias: Bias that can be positive, to exclude points close to the desired time,
+            or negative, to include the desired time (and possibly points near it).
+        :return: Instance of the same class, with some data masked.
+        """
+        return self._masked(self.time > time + bias)
+
+    def closest_point(self, time: float):
+        idx = np.argmin(np.abs(self.time - time))
+        return BandPoint(
+            time=self.time[idx],
+            flux=self.flux[idx],
+            flux_err=self.flux_err[idx],
+            detected=self.detected[idx],
         )
 
     @classmethod
@@ -110,6 +176,7 @@ class _LC:
         for k in bands:
             assert k in self.expected_bands
         self.bands = d
+        self.meta: dict = {}  # Free-form dict of metadata.
 
     @property
     def nbands(self) -> int:
@@ -125,6 +192,28 @@ class _LC:
         :rtype: list[str]
         """
         raise NotImplementedError()
+
+    def bands_sampled_in_region(self, time: float,
+                                max_diff: float) -> typing.FrozenSet[str]:
+        """Bands which have time points within (time - max_diff, time + max_diff).
+
+        :param time: Time to query.
+        :param max_diff: Max difference between actual sample time in band and `time`.
+        :return: Frozenset of bands.
+        """
+        return frozenset(
+            b for b, band_data in self.bands.items()
+            if np.any((time - max_diff < band_data.time) &
+                      (band_data.time < time + max_diff))
+        )
+
+    def is_sane(self):
+        """Put any check here that is too expensive at runtime, but useful for debugging"""
+        sane = True
+        for name, band in self.bands.items():
+            band_is_sorted = (band.time[:-1] < band.time[1:]).all()
+            sane = sane and band_is_sorted
+        return sane
 
     def __repr__(self) -> str:
         kwargs = ', '.join([
@@ -149,6 +238,9 @@ class _LC:
 
     def all_times(self) -> typing.List[np.ndarray]:
         return [bd.time for bd in self.bands.values()]
+
+    def all_times_unique(self) -> np.ndarray:
+        return np.unique(np.concatenate(self.all_times(), axis=0))
 
     def connect_the_dots(self) -> float:
         """Returns the sum of the arc length of all bands.
@@ -177,8 +269,8 @@ class LC2D:
         assert time.shape == flux.shape
         assert flux.shape == flux_err.shape
         assert flux_err.shape == detected.shape
-        self._invars = np.array([pwav, time]).T
-        self._outvars = np.array([flux, flux_err]).T
+        self._invars = np.array([pwav, time])
+        self._outvars = np.array([flux, flux_err])
         self._detected = detected
 
     @property
