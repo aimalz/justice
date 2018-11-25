@@ -193,6 +193,20 @@ class _LC:
         """
         raise NotImplementedError()
 
+    def bands_sampled_in_region(self, time: float,
+                                max_diff: float) -> typing.FrozenSet[str]:
+        """Bands which have time points within (time - max_diff, time + max_diff).
+
+        :param time: Time to query.
+        :param max_diff: Max difference between actual sample time in band and `time`.
+        :return: Frozenset of bands.
+        """
+        return frozenset(
+            b for b, band_data in self.bands.items()
+            if np.any((time - max_diff < band_data.time) &
+                      (band_data.time < time + max_diff))
+        )
+
     def is_sane(self):
         """Put any check here that is too expensive at runtime, but useful for debugging"""
         sane = True
@@ -224,6 +238,9 @@ class _LC:
 
     def all_times(self) -> typing.List[np.ndarray]:
         return [bd.time for bd in self.bands.values()]
+
+    def all_times_unique(self) -> np.ndarray:
+        return np.unique(np.concatenate(self.all_times(), axis=0))
 
     def connect_the_dots(self) -> float:
         """Returns the sum of the arc length of all bands.

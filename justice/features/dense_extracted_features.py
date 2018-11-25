@@ -10,6 +10,8 @@ from justice.align_model import graph_typecheck
 def _left_mask(before_padding, window_size):
     """Generates a mask for left-padded vectors.
 
+    Mask elements are True if a valid element is present.
+
     e.g. suppose left features are [0, 0, 0, x], where the "0" values are padding,
     so before_padding = 3. This function will return a mask [False, False, False, True].
     (in reality everything is vectorized by batch dimension.
@@ -64,7 +66,7 @@ class WindowFeatures(object):
 
         closest_time = batch_shaped(band_features['closest_time_in_band'])
         closest_flux = batch_shaped(band_features['closest_flux_in_band'])
-        in_window = tf.less(
+        self.in_window = tf.less(
             batch_shaped(band_features["closest_time_diff"]), band_time_diff
         )
 
@@ -92,7 +94,7 @@ class WindowFeatures(object):
 
         self.mask = batch_2win_shaped(
             tf.logical_and(
-                tf.concat([left_mask, right_mask], axis=1), tile_to_2win(in_window)
+                tf.concat([left_mask, right_mask], axis=1), tile_to_2win(self.in_window)
             )
         )
 
@@ -132,3 +134,16 @@ class WindowFeatures(object):
             mask = tf.expand_dims(mask, axis=i)
         mask = tf.tile(mask, [1, 1] + expected_extra_dims)
         return tf.where(mask, expanded_tensor, if_masked_tensor)
+
+
+def initial_layer(
+    window_feature: WindowFeatures, *, clip_magnitude=10.0, include_flux_and_time=False
+) -> tf.Tensor:
+    features = tf.expand_dims(window_feature.dflux_dt(clip_magnitude=clip_magnitude), 2)
+    if include_flux_and_time:
+        dflux = tf.expand_dims(window_feature.dflux, 2)
+        dtime = tf.expand_dims(window_feature.dtime, 2)
+        features = tf.concat([features, dflux, dtime],
+                             axis=2,
+                             name="initial_layer_concat")
+    return features

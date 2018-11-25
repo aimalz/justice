@@ -106,3 +106,5 @@ time_series_demo/
 data/
 justice/similarity_model/tf_models/
 .idea/
+justice-venv-py3.tar*
+plasticc_bcolz.tar*
