@@ -57,6 +57,15 @@ class BandSettings(object):
             for band_name in self.bands
         ]
 
+    def per_band_sub_model_fn_with_band_name(self, sub_model_fn, features, params):
+        return [
+            sub_model_fn(
+                self.get_band_features(features, band_name),
+                band_name=band_name,
+                params=params
+            ) for band_name in self.bands
+        ]
+
     @classmethod
     def from_params(cls, params):
         return cls(params["lc_bands"])
