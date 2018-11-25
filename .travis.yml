@@ -8,7 +8,6 @@ install:
   - pip install tensorflow
   - pip install autopep8 ipython jupyter matplotlib pandas pytest scipy yapf
   - pip install george
-  - pip install gpy
   - pip install astropy --no-deps
   - pip install bcolz
   # Temporal solution to travis issue #155
