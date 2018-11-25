@@ -9,6 +9,7 @@ import tensorflow as tf
 
 from justice import path_util
 from justice.align_model import graph_typecheck
+from justice.features import band_settings_params
 
 
 def _left_mask(before_padding, window_size):
@@ -213,7 +214,7 @@ def initial_layer_binned(
     band: str,
     nonlinearity=tf.sigmoid
 ):
-    batch_size, window_size, channels = map(int, initial_layer_features.shape)
+    batch_size, twice_window_size, channels = map(int, initial_layer_features.shape)
     if channels == 3:
         scales = cutoff_data.dflux_dt_dflux_dtime_scales(band)
         cutoffs = cutoff_data.dflux_dt_dflux_dtime_cutoffs(band)
@@ -228,16 +229,27 @@ def initial_layer_binned(
         )
         graph_typecheck.assert_shape(scales_batch_window, [1, 1, channels, 1])
         graph_typecheck.assert_shape(
-            init_layer_per_cutoff, [batch_size, window_size, channels, 1]
+            init_layer_per_cutoff, [batch_size, twice_window_size, channels, 1]
         )
         result = nonlinearity(
             (init_layer_per_cutoff - cutoffs_batch_window) / scales_batch_window
         )
         return graph_typecheck.assert_shape(
-            result, [batch_size, window_size, channels, cutoff_data.embedding_size]
+            result, [batch_size, twice_window_size, channels, cutoff_data.embedding_size]
         )
     else:
         raise NotImplementedError(f"{channels}-size data not implemented.")
+
+
+def cutoff_data_for_window_size(window_size):
+    if window_size == 10:
+        cutoff_data = CutoffData.from_file(
+            path_util.tf_align_data / 'feature_extraction' /
+            'cutoffs__window_sz-10__2018-11-23.json'
+        )
+    else:
+        raise ValueError("No supported cutoff data for window size")
+    return cutoff_data
 
 
 def initial_layer_binned_defaults(
@@ -247,13 +259,7 @@ def initial_layer_binned_defaults(
     window_size: int,
     value_if_masked: float = 0.0
 ):
-    if window_size == 10:
-        cutoff_data = CutoffData.from_file(
-            path_util.tf_align_data / 'feature_extraction' /
-            'cutoffs__window_sz-10__2018-11-23.json'
-        )
-    else:
-        raise ValueError("No supported cutoff data for window size")
+    cutoff_data = cutoff_data_for_window_size(window_size)
     wf = WindowFeatures(band_features, batch_size=batch_size, window_size=window_size)
     init_layer = initial_layer(wf, include_flux_and_time=True)
     binned = initial_layer_binned(init_layer, cutoff_data=cutoff_data, band=band)
@@ -263,3 +269,31 @@ def initial_layer_binned_defaults(
         expected_extra_dims=[3, cutoff_data.embedding_size]
     )
     return masked
+
+
+def per_band_model_fn(band_features, band_name, params, value_if_masked: float = 0.0):
+    batch_size = params["batch_size"]
+    window_size = params["window_size"]
+    return initial_layer_binned_defaults(
+        band_features,
+        band=band_name,
+        batch_size=batch_size,
+        window_size=window_size,
+        value_if_masked=value_if_masked
+    )
+
+
+def feature_model_fn(features, params):
+    band_settings = band_settings_params.BandSettings.from_params(params)
+    per_band_data = band_settings.per_band_sub_model_fn_with_band_name(
+        per_band_model_fn, features, params=params
+    )
+    return graph_typecheck.assert_shape(
+        tf.stack(per_band_data, axis=4), [
+            params["batch_size"],
+            2 * params["window_size"],
+            3,
+            cutoff_data_for_window_size(params["window_size"]).embedding_size,
+            band_settings.nbands,
+        ]
+    )
