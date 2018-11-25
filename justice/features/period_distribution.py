@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Runs various Lomb-Scarble methods."""
+"""Runs various Lomb-Scargle methods."""
 import abc
 import collections
 import typing
@@ -20,9 +20,6 @@ class MultiBandPeriod(collections.OrderedDict):
     def __init__(self, *, period, band_to_power,
                  best_periods=None, scores=None):
         super().__init__(band_to_power)
-        # for value in self.values():
-        #     assert isinstance(value, np.ndarray)
-        #     assert len(value.shape) == 1, "Expected 1D shape per band."
         self.period = period
         self.best_periods = best_periods
         self.scores = scores
@@ -53,21 +50,6 @@ class LsTransformBase(object):
     @abc.abstractmethod
     def apply(self, lc: lightcurve._LC) -> MultiBandPeriod:
         raise NotImplementedError()
-
-
-def _compute_ls(band, period):
-    return astropy.stats.LombScargle(band.time, band.flux, band.flux_err).power(
-        period
-    )  # replace with autopower soon
-
-
-class IndependentLs(LsTransformBase):
-    def apply(self, lc: lightcurve._LC) -> MultiBandPeriod:
-        band_to_power = {
-            band_name: _compute_ls(band, self.period)
-            for band_name, band in lc.bands.items()
-        }
-        return MultiBandPeriod(period=self.period, band_to_power=band_to_power)
 
 
 class MultiBandLs(LsTransformBase):

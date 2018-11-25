@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
-"""Tests period distribution code."""
-from justice import simulate
+import pytest
+from justice.datasets import plasticc_data
 from justice.features import period_distribution
+import numpy as np
 
-
-def test_different_period_gauss_data():
-    faster_lc = simulate.TestLC.make_realistic_gauss(15.0)
-    slower_lc = simulate.TestLC.make_realistic_gauss(30.0)
-
-    period_distribution.IndependentLs().apply(faster_lc)
-    period_distribution.IndependentLs().apply(slower_lc)
-
-    # TODO(gatoatigrado): Compare max point of two distributions.
-    # However, I'm not getting sensible results from LS yet (probably bad frequency
-    # scale initialization).
+@pytest.mark.requires_real_data
+def test_lomb_scargle():
+    training = plasticc_data.PlasticcDataset.training_data()
+    lcs = plasticc_data.PlasticcDatasetLC.get_lcs_by_target("data/plasticc_training_data.db",92)
+    period_transform = period_distribution.MultiBandLs()
+    lc = lcs[0]
+    mbp = period_transform.apply(lc)
+    period_best = mbp.best_periods[0]
+    assert np.abs(period_best-.324499300710728) < 1e-5

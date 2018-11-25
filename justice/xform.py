@@ -40,21 +40,6 @@ class BandNameMapper:
         detected = np.concatenate([band.detected for name, band in lc.bands.items()])
         return lightcurve.LC2D(pwav, time, flux, flux_err, detected)
 
-    def transform_band(self, bd, ty, dy):
-        # currently ignoring rs
-        # check that error really does behave this way
-        new_x = self.dx * (bd.time + self.tx)
-        new_y = dy * (bd.flux + ty)
-        new_yerr = np.sqrt(dy) * bd.flux_err
-        return bd.__class__(new_x, new_y, new_yerr, bd.detected)
-
-    def transform(self, lc):
-        bands = {
-            b: self.transform_band(lc.bands[b], self.ty[b], self.dy[b])
-            for b in lc.bands
-        }
-        return lc.__class__(**bands)
-
 
 class BandDataXform:
     def __init__(self, time_fn, flux_fn, flux_err_fn):
