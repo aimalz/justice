@@ -15,7 +15,7 @@ setup(
     url='https://github.com/aimalz/justice',
     packages=find_packages(),
     install_requires=[
-        'astropy', 'tensorflow', 'matplotlib', 'pandas', 'scipy', 'george'
+        'astropy', 'tensorflow', 'matplotlib', 'pandas', 'scipy', 'george', 'gatspy'
     ],
     extras_require={'dev': ['autopep8', 'ipython', 'jupyter', 'mypy', 'pytest', 'yapf']}
 )
