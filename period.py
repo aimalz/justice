@@ -14,13 +14,12 @@ def find_best_periods(lc):
 
 def main():
     with open("periodogram.csv", 'w') as f:
-        lcs = chain.from_iterable(
-            [plasticc_data.PlasticcDatasetLC.get_lcs_by_target(
-                "data/plasticc_training_data.db", t, ddf=True)
-             for t in (6, 53, 16, 65, 92, 15, 42, 52, 62, 64, 67, 88, 90, 95)])
+        source = plasticc_data.PlasticcBcolzSource.get_default()
+        lcs_generator = plasticc_data.PlasticcDatasetLC.bcolz_get_all_lcs(
+            source, 'training_set')
         with confut.ProcessPoolExecutor() as executor:
             for lc, best_periods, scores in executor.map(find_best_periods,
-                                                         lcs):
+                                                         lcs_generator):
                 print(",".join(map(str,
                                    [lc.meta['object_id'], lc.meta['ddf'],
                                     lc.meta['target'], *best_periods,
