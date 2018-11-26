@@ -5,7 +5,7 @@ import subprocess
 ROOT = '/home/aim267/justice'
 
 
-SL_TEMPLATE = f'''
+SL_TEMPLATE = '''
     #!/bin/bash -l
     #SBATCH --nodes 1
     #SBATCH -J justice181121
@@ -14,7 +14,7 @@ SL_TEMPLATE = f'''
     #SBATCH -t 00:05:00
     #SBATCH --ntasks-per-node 28
     #run the application:
-    bash {ROOT}/e2e-{}.sh
+    bash {}/e2e-{}.sh
     '''
 
 
@@ -30,7 +30,7 @@ SH_TEMPLATE = '''
 def dispatch(job_id, pairs):
     arg = ';'.join([f'{pair[0]},{pair[1]}' for pair in pairs])
     with open(f'{ROOT}/e2e-{job_id}.sl', 'w') as f:
-        f.write(SL_TEMPLATE.format(job_id))
+        f.write(SL_TEMPLATE.format(ROOT, job_id))
     with open(f'{ROOT}/e2e-{job_id}.sh', 'w') as f:
         f.write(SH_TEMPLATE.format(arg))
     subprocess.call(['sbatch', f'{ROOT}/e2e-{job_id}.sl'])
