@@ -1,3 +1,5 @@
+import itertools
+
 import pytest
 
 from justice.datasets import plasticc_data
@@ -47,3 +49,16 @@ def test_can_pass_plasticc_bcolz_source_to_get_lcs_by_target():
     source = plasticc_data.PlasticcBcolzSource.get_default()
     lcs = plasticc_data.PlasticcDatasetLC.get_lcs_by_target(source, 67)
     assert len(lcs) == 208
+
+
+@pytest.mark.requires_real_data
+def test_iterate_through_light_curves():
+    source = plasticc_data.PlasticcBcolzSource.get_default()
+    lcs_generator = plasticc_data.PlasticcDatasetLC.bcolz_get_all_lcs(
+        source, 'test_set', chunk_size=2
+    )
+    lcs = list(itertools.islice(lcs_generator, 5))
+    assert len(lcs) == 5
+    for lc in lcs:
+        assert isinstance(lc, plasticc_data.PlasticcDatasetLC)
+        assert len(lc.all_times_unique()) > 0

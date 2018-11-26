@@ -115,6 +115,9 @@ class PlasticcBcolzSource(object):
             self.pandas_indices[(table_name, column_name)] = df
         return self.pandas_indices[(table_name, column_name)]
 
+    def all_object_ids(self, table_name):
+        return self.get_pandas_index(table_name).index.values
+
     @classmethod
     def get_with_cache(cls, source):
         source = str(source)  # in case a pathlib.Path
@@ -232,6 +235,25 @@ class PlasticcDatasetLC(lightcurve._LC):
             lc = lcs[obj_id]
             lc.meta = dict(zip(meta_table.names, meta_row))
         return list(lcs.values())
+
+    @classmethod
+    def bcolz_get_all_lcs(
+        cls, bcolz_source: PlasticcBcolzSource, dataset: str, chunk_size=1000
+    ) -> typing.Iterable['PlasticcDatasetLC']:
+        """Generator that will eventually yield all light curves.
+
+        :param bcolz_source: Data source.
+        :param dataset: String typically 'training_set' or 'test_set'.
+        :param chunk_size: Internal parameter determining how many light curves to retrieve
+            at a time from bcolz.
+        :yields: PLAsTiCC light curves.
+        """
+        ids_array = bcolz_source.all_object_ids(dataset)
+        for start_idx in range(0, len(ids_array), chunk_size):
+            ids_chunk = list(map(int, ids_array[start_idx:(start_idx + chunk_size)]))
+            yield from cls.bcolz_get_lcs_by_obj_ids(
+                bcolz_source, dataset=dataset, obj_ids=ids_chunk
+            )
 
     @classmethod
     def get_lc(cls, source, dataset, obj_id):
