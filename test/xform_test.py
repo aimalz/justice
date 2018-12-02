@@ -4,9 +4,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 from justice import xform, simulate
-import lightcurve_test
+from test import lightcurve_test
 
 
 def test_linear_band_data_xform():
