@@ -10,5 +10,5 @@ def test_lomb_scargle():
     period_transform = period_distribution.MultiBandLs()
     lc = lcs[0]
     mbp = period_transform.apply(lc)
-    period_best = mbp.best_period
+    period_best = mbp.best_periods[0]
     assert np.abs(period_best-.324499300710728) < 1e-5
