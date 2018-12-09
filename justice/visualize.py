@@ -97,19 +97,20 @@ def plot_lcs(
         squeeze=False
     )
 
-    fig.suptitle(title)
+    if title:
+        fig.suptitle(title)
 
     for i, b in enumerate(bands):
         for lci in lcs:
             detec = lci.bands[b].detected
-            ax[i, 0].errorbar(
+            detected_plot = ax[i, 0].errorbar(
                 lci.bands[b].time[detec == 1],
                 lci.bands[b].flux[detec == 1],
                 yerr=lci.bands[b].flux_err[detec == 1],
                 linestyle='None',
                 marker='.'
             )
-            ax[i, 0].errorbar(
+            not_detected_plot = ax[i, 0].errorbar(
                 lci.bands[b].time[detec == 0],
                 lci.bands[b].flux[detec == 0],
                 yerr=lci.bands[b].flux_err[detec == 0],
@@ -117,6 +118,8 @@ def plot_lcs(
                 alpha=.2,
                 marker='.'
             )
+            plt.legend([detected_plot, not_detected_plot], ["detected", "not detected"],
+                       loc="upper right")
 
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
@@ -130,7 +133,10 @@ def plot_lcs(
     plt.ylabel(b).set_rotation(0)
     plt.xlabel('time')
     plt.subplots_adjust(hspace=0.4)
-    plt.tight_layout()
+    if title:
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    else:
+        plt.tight_layout()
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return fig
