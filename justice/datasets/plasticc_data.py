@@ -138,6 +138,13 @@ class PlasticcDatasetLC(lightcurve._LC):
 
     expected_bands = list('ugrizy')
 
+    def get_string_name(self):
+        return "Object {}".format(self.meta.get("object_id", "NO_OBJECT_ID")) + (
+            ", target {}".format(self.meta['target']) if 'target' in self.meta else ""
+        ) + (
+            " ￮ " + self.meta["last_transform"] if "last_transform" in self.meta else ""
+        )
+
     @classmethod
     def _get_band_from_raw(cls, conn, dataset, obj_id, band_id):
 

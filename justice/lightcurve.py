@@ -1,5 +1,7 @@
 import abc
+import base64
 import collections
+import io
 import typing
 import numpy as np
 import scipy.stats as sps
@@ -178,6 +180,12 @@ class _LC:
         self.bands = d
         self.meta: dict = {}  # Free-form dict of metadata.
 
+    def get_string_name(self) -> str:
+        """Gets title for light curve; subclasses should use metadata."""
+        return "Light curve with {} points".format(
+            sum(len(band.time) for band in self.bands.values())
+        )
+
     @property
     def nbands(self) -> int:
         """Returns the number of bands."""
@@ -202,10 +210,12 @@ class _LC:
         :return: Frozenset of bands.
         """
         return frozenset(
-            b for b, band_data in self.bands.items()
-            if np.any((time - max_diff < band_data.time) &
-                      (band_data.time < time + max_diff))
+            b for b, band_data in self.bands.items() if np.
+            any((time - max_diff < band_data.time) & (band_data.time < time + max_diff))
         )
+
+    def total_points_all_bands(self) -> int:
+        return sum(len(band.time) for band in self.bands.values())
 
     def is_sane(self):
         """Put any check here that is too expensive at runtime, but useful for debugging"""
@@ -222,6 +232,17 @@ class _LC:
         return '{dataset}({kwargs})'.format(
             dataset=self.__class__.__name__, kwargs=kwargs
         )
+
+    def _repr_html_(self):
+        """Magic that lets us just type `lc` in jupyter and see a plot."""
+        from justice import visualize
+        from matplotlib import pyplot as plt
+        fig = visualize.plot_lcs([self], title=self.get_string_name())
+        tmpfile = io.BytesIO()
+        fig.savefig(tmpfile, format='png')
+        plt.close(fig)
+        encoded = base64.b64encode(tmpfile.getvalue()).decode("ascii")
+        return f"<img src='data:image/png;base64,{encoded}'>"
 
     def __add__(self, other: '_LC') -> '_LC':
         """Concatenates all bands of two light curves together.
