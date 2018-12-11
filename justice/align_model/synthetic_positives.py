@@ -6,6 +6,7 @@ import typing
 
 import numpy as np
 import tensorflow as tf
+from scipy.stats import truncnorm
 
 from justice import xform, lightcurve
 from justice.align_model import lr_prefixing
@@ -47,7 +48,8 @@ class BasicPositivesGenerator:
         translate_flux_stdev=0.01,
         dilate_time_stdev_factor=1.1,
         dilate_flux_stdev_factor=1.5,
-        rng: random.Random = None
+        rng: random.Random = None,
+        max_std=4
     ):
         self.translate_time_stdev = translate_time_stdev
         self.translate_flux_stdev = translate_flux_stdev
@@ -60,17 +62,26 @@ class BasicPositivesGenerator:
         self.log_dilate_time_stdev = math.log(dilate_time_stdev_factor)
         self.log_dilate_flux_stdev = math.log(dilate_flux_stdev_factor)
         self.rng = random.Random() if rng is None else rng
+        self.max_std = max_std
 
     def make_xform(self):
-        translate_time = self.rng.normalvariate(0, self.translate_time_stdev)
-        translate_flux = self.rng.normalvariate(0, self.translate_flux_stdev)
-        log_dilate_time = self.rng.normalvariate(0, self.log_dilate_time_stdev)
-        log_dilate_flux = self.rng.normalvariate(0, self.log_dilate_flux_stdev)
+        args = np.array([
+            self.translate_time_stdev,
+            self.translate_flux_stdev,
+            self.log_dilate_time_stdev,
+            self.log_dilate_flux_stdev
+        ])
+        vals = truncnorm.rvs(
+            -self.max_std * args,
+            self.max_std * args,
+            0,
+            args,
+            random_state=self.rng.getrandbits(32))
         return xform.LinearBandDataXform(
-            translate_time,
-            translate_flux,
-            dilate_time=math.exp(log_dilate_time),
-            dilate_flux=math.exp(log_dilate_flux),
+            vals[0],
+            vals[1],
+            dilate_time=math.exp(vals[2]),
+            dilate_flux=math.exp(vals[3]),
             check_positive=True,
         )
 
@@ -111,7 +122,8 @@ class RandomSubsampler(xform.BandDataXform):
         preserved = indices[preserve_mask]
         indices = indices[~preserve_mask]
         num_points = len(indices)
-        hard_min_size = min(num_points, 2)  # usually 2 but allow lower if very small
+        # usually 2 but allow lower if very small
+        hard_min_size = min(num_points, 2)
         min_size = max(hard_min_size, int(self.min_rate * num_points))
         max_size = int(math.ceil(self.max_rate * num_points))
         sample_size = self.rng.randint(min_size, max_size)
