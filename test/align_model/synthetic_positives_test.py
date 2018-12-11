@@ -21,10 +21,10 @@ def test_xform_params_distribution():
 
     # TODO(gatoatigrado): This time variation is too much. Look at
     # scipy.stats.truncnorm or do rejection sampling.
-    assert 0.01 < min(time_dilations)
-    assert max(time_dilations) < 16
-    assert 0.01 < min(flux_dilations)
-    assert max(flux_dilations) < 24
+    assert 0.04 < min(time_dilations)
+    assert max(time_dilations) < 25
+    assert 0.04 < min(flux_dilations)
+    assert max(flux_dilations) < 25
     assert abs(np.median(time_dilations) - 1.0) < 0.05
     assert abs(np.median(flux_dilations) - 1.0) < 0.05
 

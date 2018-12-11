@@ -48,8 +48,7 @@ class BasicPositivesGenerator:
         translate_flux_stdev=0.01,
         dilate_time_stdev_factor=1.1,
         dilate_flux_stdev_factor=1.5,
-        rng: random.Random = None,
-        max_std=4
+        rng: random.Random = None
     ):
         self.translate_time_stdev = translate_time_stdev
         self.translate_flux_stdev = translate_flux_stdev
@@ -62,26 +61,23 @@ class BasicPositivesGenerator:
         self.log_dilate_time_stdev = math.log(dilate_time_stdev_factor)
         self.log_dilate_flux_stdev = math.log(dilate_flux_stdev_factor)
         self.rng = random.Random() if rng is None else rng
-        self.max_std = max_std
 
     def make_xform(self):
-        args = np.array([
-            self.translate_time_stdev,
-            self.translate_flux_stdev,
-            self.log_dilate_time_stdev,
-            self.log_dilate_flux_stdev
-        ])
-        vals = truncnorm.rvs(
-            -self.max_std * args,
-            self.max_std * args,
+        translate_time = self.rng.normalvariate(0, self.translate_time_stdev)
+        translate_flux = self.rng.normalvariate(0, self.translate_flux_stdev)
+
+        dilations = truncnorm.rvs(
+            math.log(0.04),
+            math.log(25),
             0,
-            args,
+            [self.log_dilate_flux_stdev, self.log_dilate_time_stdev],
             random_state=self.rng.getrandbits(32))
+
         return xform.LinearBandDataXform(
-            vals[0],
-            vals[1],
-            dilate_time=math.exp(vals[2]),
-            dilate_flux=math.exp(vals[3]),
+            translate_time,
+            translate_flux,
+            dilate_time=math.exp(dilations[0]),
+            dilate_flux=math.exp(dilations[1]),
             check_positive=True,
         )
 
