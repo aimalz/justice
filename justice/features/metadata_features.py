@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Metadata feature extractor."""
 from justice import lightcurve
+from justice.features import pointwise_feature_extractor
 
 
-class MetadataValueExtractor(object):
+class MetadataValueExtractor(pointwise_feature_extractor.PointwiseFeatureExtractor):
     def __init__(self):
         pass
 

@@ -15,19 +15,24 @@ def _get_targets(meta_table):
     return set(meta_table['target'])
 
 
-def _gen_pairs(generators):
+def _gen_pairs(generators, random_state=None):
     while True:
         choices = numpy.random.choice(generators, size=2, replace=False).tolist()
         yield (next(choices[0]), next(choices[1]))
 
 
-def get_negative_pairs_dataset(meta_table=None):
+def negative_pairs_generator(meta_table=None):
     if meta_table is None:
         bcolz_source = plasticc_data.PlasticcBcolzSource.get_default()
         meta_table = bcolz_source.get_table('training_set_metadata')
     targets = _get_targets(meta_table)
     generators = [gen_ids_by_target(meta_table, t) for t in targets]
+    return _gen_pairs(generators)
+
+
+def get_negative_pairs_dataset(meta_table=None):
+    negative_pairs = negative_pairs_generator(meta_table)
     return tf.data.Dataset.from_generator(
-        lambda: _gen_pairs(generators), (tf.int64, tf.int64),
+        lambda: negative_pairs, (tf.int64, tf.int64),
         (tf.TensorShape([]), tf.TensorShape([]))
     )

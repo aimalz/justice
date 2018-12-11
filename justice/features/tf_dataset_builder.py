@@ -33,7 +33,6 @@ def auto_shape(value):
 
 
 def dataset_from_generator_auto_dtypes(generator):
-    print("dataset_from_generator_auto_dtypes")
     first_features = next(generator)
     dtypes = {key: auto_dtype(key, value) for key, value in first_features.items()}
     shapes = {key: auto_shape(value) for key, value in first_features.items()}

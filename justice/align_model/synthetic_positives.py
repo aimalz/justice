@@ -5,31 +5,12 @@ import random
 import typing
 
 import numpy as np
-import tensorflow as tf
 
-from justice import xform, lightcurve
-from justice.align_model import lr_prefixing
-from justice.features import band_settings_params, raw_value_features, tf_dataset_builder
-
-
-class FullPositivesPair:
-    """Simple struct for a pair of positive examples.
-
-    The meaning is that `time_a` of light curve `lca` should be aligned with `time_b` of
-    light curve `lcb`. For the current alignment model, we do not have other gold/intended
-    transformation parameters, we merely hope that points having the best alignment will
-    lead to reasonable inference of dilation.
-    """
-
-    __slots__ = ("lca", "lcb", "time_a", "time_b")
-
-    def __init__(
-        self, lca: lightcurve._LC, lcb: lightcurve._LC, time_a: float, time_b: float
-    ):
-        self.lca = lca
-        self.lcb = lcb
-        self.time_a = time_a
-        self.time_b = time_b
+from justice import lightcurve
+from justice import xform
+from justice.features import band_settings_params, example_pair
+from justice.features import raw_value_features
+from justice.features.example_pair import FullPositivesPair
 
 
 class BasicPositivesGenerator:
@@ -167,26 +148,13 @@ class PositivePairSubsampler:
         )
 
 
-class RawValuesFullPositives:
+class RawValuesFullPositives(example_pair.PairFexFromPointwiseFex):
     def __init__(self, bands, window_size):
         self.band_settings = band_settings_params.BandSettings(bands=bands)
-        self.fex = raw_value_features.RawValueExtractor(
+        fex = raw_value_features.RawValueExtractor(
             window_size=window_size, band_settings=self.band_settings
         )
-
-    def apply(self, fpp: FullPositivesPair) -> typing.Dict[str, tf.Tensor]:
-        first_features = self.fex.extract(fpp.lca, fpp.time_a)
-        second_features = self.fex.extract(fpp.lcb, fpp.time_b)
-        result = lr_prefixing.prefix_dicts(first_features, second_features)
-        result["labels"] = True
-        return result
-
-    def make_dataset(
-        self, fpp_gen: typing.Iterator[FullPositivesPair]
-    ) -> tf.data.Dataset:
-        return tf_dataset_builder.dataset_from_generator_auto_dtypes(
-            self.apply(fpp) for fpp in fpp_gen
-        )
+        super(RawValuesFullPositives, self).__init__(fex=fex, label=True)
 
     @classmethod
     def from_params(cls, params: dict):
