@@ -25,7 +25,7 @@ def model_fn(features, labels, mode, params):
         return [
             tf.keras.layers.Dropout(dropout_rate, name=f"layer_{index}_dropout"),
             tf.keras.layers.Dense(hidden_size, name=f"layer_{index}_dense"),
-            tf.keras.layers.Activation("relu", name=f"layer_{index}_relu"),
+            tf.keras.layers.Activation("elu", name=f"layer_{index}_elu"),
         ]
 
     fc_layers = [
@@ -56,12 +56,22 @@ def model_fn(features, labels, mode, params):
     aux_loss_factor = params.get("aux_loss_factor", 0.1)
     if mode != tf.estimator.ModeKeys.PREDICT:
         labels = features["labels"]
-        loss = sim.loss(labels) + aux_loss_factor * sim.aux_loss()
+        sim_loss = sim.loss(labels)
+        loss = sim_loss + aux_loss_factor * sim.aux_loss()
 
     train_op = None
     if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = tf.contrib.opt.NadamOptimizer()
-        train_op = optimizer.minimize(loss)
+        learning_rate = params.get("learning_rate", 1e-3)
+        clip_norm = params.get("clip_norm", 1.0)
+
+        optimizer = tf.contrib.opt.NadamOptimizer(learning_rate=learning_rate)
+        grads_and_vars = [
+            gv for gv in optimizer.compute_gradients(loss) if gv[0] is not None
+        ]
+        grads, vars = zip(*grads_and_vars)
+        grads = [tf.clip_by_norm(t, clip_norm=clip_norm) for t in grads]
+        global_step = tf.train.get_or_create_global_step()
+        train_op = optimizer.apply_gradients(zip(grads, vars), global_step=global_step)
 
     return tf.estimator.EstimatorSpec(
         mode=mode, predictions={'score': sim.score()}, loss=loss, train_op=train_op

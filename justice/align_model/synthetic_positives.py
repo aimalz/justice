@@ -95,7 +95,10 @@ class RandomSubsampler(xform.BandDataXform):
         hard_min_size = min(num_points, 2)  # usually 2 but allow lower if very small
         min_size = max(hard_min_size, int(self.min_rate * num_points))
         max_size = int(math.ceil(self.max_rate * num_points))
-        sample_size = self.rng.randint(min_size, max_size)
+        if min_size >= max_size:
+            sample_size = min_size
+        else:
+            sample_size = self.rng.randint(min_size, max_size)
         sample_indices = np.sort(
             np.concatenate([
                 preserved,

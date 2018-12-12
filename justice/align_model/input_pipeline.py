@@ -9,6 +9,7 @@ RawValueExtractor elsewhere. On the other hand, plasticc-specific stuff should g
 import abc
 import logging
 import random
+import time
 import typing
 
 import numpy as np
@@ -18,6 +19,31 @@ import justice.features.example_pair
 from justice import lightcurve
 from justice.datasets import plasticc_data, sharded_plasticc
 from justice.features import tf_dataset_builder, example_pair, lc_id_features
+
+
+def timed_generator(iterator, name, print_every=30.0, initial_delay=1.0):
+    """Records the time it takes to dequeue elements from an iterator.
+
+    Incrementally prints stats on those times.
+
+    :param iterator: Iterator to time.
+    :param name: Name of the iterator being timed.
+    :param print_every: How many seconds to print.
+    :param initial_delay: Initial delay before printing, in seconds.
+    :yields: Elements from `iterator`.
+    """
+    start = time.time()
+    last_printed = start - print_every + initial_delay
+    elapsed = []
+    for x in iterator:
+        elapsed.append(time.time() - start)
+        if time.time() - last_printed > print_every:
+            ntiles = np.percentile(elapsed, q=np.linspace(0, 100, 5))
+            print(f"Elapsed time percentiles for {name!r}: {ntiles} s")
+            last_printed = time.time()
+            elapsed = []
+        yield x
+        start = time.time()
 
 
 class PositivesDatasetBuilder(metaclass=abc.ABCMeta):
@@ -70,6 +96,7 @@ class PositivesDatasetBuilder(metaclass=abc.ABCMeta):
         positive_pairs = (self.generate_synthetic_pair(lc) for lc in lcs_iterator)
         extractor = self.feature_extractor
         features = (extractor.apply(fpp) for fpp in positive_pairs)
+        features = timed_generator(features, f"positive example generator ({dataset})")
         return tf_dataset_builder.dataset_from_generator_auto_dtypes(features)
 
     def dataset_length(self, dataset: str) -> int:
@@ -158,6 +185,7 @@ class NegativesDatasetBuilder(metaclass=abc.ABCMeta):
         )
         extractor = self.feature_extractor
         features = (extractor.apply(fpp) for fpp in negative_pairs)
+        features = timed_generator(features, "negative example generator")
         return tf_dataset_builder.dataset_from_generator_auto_dtypes(features)
 
     def training_dataset(self) -> tf.data.Dataset:
