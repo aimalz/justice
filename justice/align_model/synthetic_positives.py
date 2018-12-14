@@ -48,7 +48,9 @@ class BasicPositivesGenerator:
         translate_flux_stdev=0.01,
         dilate_time_stdev_factor=1.1,
         dilate_flux_stdev_factor=1.5,
-        rng: random.Random = None
+        rng: random.Random = None,
+        max_time_dilation = 6,
+        max_flux_dilation = 16
     ):
         self.translate_time_stdev = translate_time_stdev
         self.translate_flux_stdev = translate_flux_stdev
@@ -61,16 +63,20 @@ class BasicPositivesGenerator:
         self.log_dilate_time_stdev = math.log(dilate_time_stdev_factor)
         self.log_dilate_flux_stdev = math.log(dilate_flux_stdev_factor)
         self.rng = random.Random() if rng is None else rng
+        self.max_time_dilation = max_time_dilation
+        self.max_flux_dilation = max_flux_dilation
 
     def make_xform(self):
         translate_time = self.rng.normalvariate(0, self.translate_time_stdev)
         translate_flux = self.rng.normalvariate(0, self.translate_flux_stdev)
+        time_trunc = math.log(self.max_time_dilation) - self.log_dilate_time_stdev
+        flux_trunc = math.log(self.max_flux_dilation) - self.log_dilate_flux_stdev
 
         dilations = truncnorm.rvs(
-            math.log(0.04),
-            math.log(25),
+            [-time_trunc, -flux_trunc],
+            [time_trunc, flux_trunc],
             0,
-            [self.log_dilate_flux_stdev, self.log_dilate_time_stdev],
+            [self.log_dilate_time_stdev, self.log_dilate_flux_stdev],
             random_state=self.rng.getrandbits(32))
 
         return xform.LinearBandDataXform(
