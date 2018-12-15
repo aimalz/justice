@@ -5,8 +5,7 @@ import subprocess
 ROOT = '/home/aim267/justice'
 
 
-SL_TEMPLATE = '''
-#!/bin/bash -l
+SL_TEMPLATE = '''#!/bin/bash -l
 #SBATCH --nodes 1
 #SBATCH -J justice181121
 #SBATCH --mail-user=aimalz@nyu.edu
@@ -17,8 +16,7 @@ SL_TEMPLATE = '''
 bash {}/{}-{}.sh
     '''
 
-SH_TEMPLATE = '''
-#!/bin/bash
+SH_TEMPLATE = '''#!/bin/bash
 module load python3/intel/3.6.3
 cd /home/$USER/justice
 source /scratch/$USER/venv3/bin/activate
