@@ -6,23 +6,23 @@ ROOT = '/home/aim267/justice'
 
 
 SL_TEMPLATE = '''
-    #!/bin/bash -l
-    #SBATCH --nodes 1
-    #SBATCH -J justice181121
-    #SBATCH --mail-user=aimalz@nyu.edu
-    #SBATCH --mail-type=ALL
-    #SBATCH -t 00:05:00
-    #SBATCH --ntasks-per-node 28
-    #run the application:
-    bash {}/{}-{}.sh
+#!/bin/bash -l
+#SBATCH --nodes 1
+#SBATCH -J justice181121
+#SBATCH --mail-user=aimalz@nyu.edu
+#SBATCH --mail-type=ALL
+#SBATCH -t 00:05:00
+#SBATCH --ntasks-per-node 28
+#run the application:
+bash {}/{}-{}.sh
     '''
 
 SH_TEMPLATE = '''
-    #!/bin/bash
-    module load python3/intel/3.6.3
-    cd /home/$USER/justice
-    source /scratch/$USER/venv3/bin/activate
-    python3 -m {} {}
+#!/bin/bash
+module load python3/intel/3.6.3
+cd /home/$USER/justice
+source /scratch/$USER/venv3/bin/activate
+python3 -m {} {}
     '''
 
 
