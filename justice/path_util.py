@@ -9,3 +9,5 @@ import pathlib
 project_root: pathlib.Path = pathlib.Path(__file__).parent.parent
 data_dir: pathlib.Path = project_root / 'data'
 models_dir: pathlib.Path = project_root / 'models'
+align_model_dir: pathlib.Path = models_dir / 'align'
+tf_align_data: pathlib.Path = data_dir / 'tf_align_model'

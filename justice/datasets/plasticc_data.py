@@ -115,6 +115,9 @@ class PlasticcBcolzSource(object):
             self.pandas_indices[(table_name, column_name)] = df
         return self.pandas_indices[(table_name, column_name)]
 
+    def all_object_ids(self, table_name):
+        return self.get_pandas_index(table_name).index.values
+
     @classmethod
     def get_with_cache(cls, source):
         source = str(source)  # in case a pathlib.Path
@@ -134,6 +137,13 @@ class PlasticcDatasetLC(lightcurve._LC):
     ]
 
     expected_bands = list('ugrizy')
+
+    def get_string_name(self):
+        return "Object {}".format(self.meta.get("object_id", "NO_OBJECT_ID")) + (
+            ", target {}".format(self.meta['target']) if 'target' in self.meta else ""
+        ) + (
+            " ￮ " + self.meta["last_transform"] if "last_transform" in self.meta else ""
+        )
 
     @classmethod
     def _get_band_from_raw(cls, conn, dataset, obj_id, band_id):
@@ -234,6 +244,25 @@ class PlasticcDatasetLC(lightcurve._LC):
         return list(lcs.values())
 
     @classmethod
+    def bcolz_get_all_lcs(
+        cls, bcolz_source: PlasticcBcolzSource, dataset: str, chunk_size=1000
+    ) -> typing.Iterable['PlasticcDatasetLC']:
+        """Generator that will eventually yield all light curves.
+
+        :param bcolz_source: Data source.
+        :param dataset: String typically 'training_set' or 'test_set'.
+        :param chunk_size: Internal parameter determining how many light curves to retrieve
+            at a time from bcolz.
+        :yields: PLAsTiCC light curves.
+        """
+        ids_array = bcolz_source.all_object_ids(dataset)
+        for start_idx in range(0, len(ids_array), chunk_size):
+            ids_chunk = list(map(int, ids_array[start_idx:(start_idx + chunk_size)]))
+            yield from cls.bcolz_get_lcs_by_obj_ids(
+                bcolz_source, dataset=dataset, obj_ids=ids_chunk
+            )
+
+    @classmethod
     def get_lc(cls, source, dataset, obj_id):
         if isinstance(source, sqlite3.Connection):
             return cls._sqlite_get_lc(source, dataset, obj_id)
@@ -290,15 +319,14 @@ class PlasticcDatasetLC(lightcurve._LC):
 
     @classmethod
     def get_bandnamemapper(cls):
-        # THESE ARE NOT THE REAL NUMBERS ALEX PLEASE FIX!! -davyd
         return xform.BandNameMapper(
             **{
-                'u': 300.,
-                'g': 400.,
-                'r': 500.,
-                'i': 600.,
-                'z': 700.,
-                'y': 800
+                'u': 368.55,
+                'g': 484.45,
+                'r': 622.95,
+                'i': 753.55,
+                'z': 868.6500000000001,
+                'y': 967.8499999999999
             }
         )
 

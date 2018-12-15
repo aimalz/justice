@@ -1,4 +1,5 @@
 """Some handy diagnostic plots"""
+from typing import List, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,6 +8,7 @@ import astropy.stats
 
 # would like to have these pass axes between each other to combine what's being plotted
 # also want to accommodate multiple filters/bands of y
+from justice.features import period_distribution
 
 
 def setup_plot():
@@ -57,13 +59,21 @@ def plot_single_lc_color_bands(lc, title, figsize=(10, 5), colors=None):
     return fig
 
 
-def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default', title=None):
+def plot_lcs(
+    lcs,
+    *,
+    save=None,
+    plot_period=False,
+    title=None,
+    period_transform: period_distribution.LsTransformBase = None
+):
     """Plot multiple (or single) lightcurves at once
 
     :param lcs: list of lightcurves
     :param save: boolean to save or not
-    :param plot_frequency: Whether to plot frequencies alongside light curves.
-    :param frequency: Frequency scale. Defaults to a np.linspace.
+    :param plot_period: Whether to plot periods alongside light curves.
+    :param period: Period scale. Defaults to a np.linspace.
+    :param Period_transform: Transformation class.
     :return: figure object
     """
     # This needs a way to have names of the bands, but it works for now.
@@ -74,31 +84,33 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default', title
     numbands = lcs[0].nbands
     bands = lcs[0].bands
 
-    if frequency == 'default':
-        frequency = np.linspace(1e-2, 1, 50)
+    period_per_lc: List[period_distribution.MultiBandPeriod] = []
+    if plot_period:
+        period_per_lc = list(map(period_transform.apply, lcs))
 
     fig, ax = plt.subplots(
         nrows=numbands,
-        ncols=(2 if plot_frequency else 1),
+        ncols=(2 if plot_period else 1),
         sharex='col',
         # sharey='row',
-        figsize=((12 if plot_frequency else 8), 6),
+        figsize=((12 if plot_period else 8), 6),
         squeeze=False
     )
 
-    fig.suptitle(title)
+    if title:
+        fig.suptitle(title)
 
     for i, b in enumerate(bands):
         for lci in lcs:
             detec = lci.bands[b].detected
-            ax[i, 0].errorbar(
+            detected_plot = ax[i, 0].errorbar(
                 lci.bands[b].time[detec == 1],
                 lci.bands[b].flux[detec == 1],
                 yerr=lci.bands[b].flux_err[detec == 1],
                 linestyle='None',
                 marker='.'
             )
-            ax[i, 0].errorbar(
+            not_detected_plot = ax[i, 0].errorbar(
                 lci.bands[b].time[detec == 0],
                 lci.bands[b].flux[detec == 0],
                 yerr=lci.bands[b].flux_err[detec == 0],
@@ -106,21 +118,25 @@ def plot_lcs(lcs, *, save=None, plot_frequency=False, frequency='default', title
                 alpha=.2,
                 marker='.'
             )
+            plt.legend([detected_plot, not_detected_plot], ["detected", "not detected"],
+                       loc="upper right")
 
-        #ax[i, 0].set_ylabel('flux')
         if i == numbands - 1:
             ax[i, 0].set_xlabel('time')  # Only set on bottom plot.
+            if plot_period:
+                ax[i, 1].set_xlabel('period')
 
-        if plot_frequency:
-            for lc in lcs:
-                power = astropy.stats.LombScargle(
-                    lc.bands[b].time, lc.bands[b].flux, lc.bands[b].flux_err
-                ).power(frequency)
-                ax[i, 1].plot(frequency, power)
-        plt.ylabel(b).set_rotation(0)
+        if plot_period:
+            for multi_band_period in period_per_lc:
+                ax[i, 1].plot(multi_band_period.period, multi_band_period[b])
+
+    plt.ylabel(b).set_rotation(0)
     plt.xlabel('time')
     plt.subplots_adjust(hspace=0.4)
-    plt.tight_layout()
+    if title:
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    else:
+        plt.tight_layout()
     if isinstance(save, str):
         plt.savefig(save, dpi=250)
     return fig
@@ -137,6 +153,8 @@ def plot_arclen_res(lca, lcb, xforma, save=None):
     :return: figure
     """
     fig = plt.figure(figsize=(10, 10))
+    lcc = xforma.apply(lcb)
+    fig = plt.figure()
     lcc = xforma.apply(lcb)
     lcd = lca + lcc
     numbands = lca.nbands

@@ -8,9 +8,9 @@ install:
   - pip install tensorflow
   - pip install autopep8 ipython jupyter matplotlib pandas pytest scipy yapf
   - pip install george
-  - pip install gpy
   - pip install astropy --no-deps
   - pip install bcolz
+  - pip install gatspy
   # Temporal solution to travis issue #155
   # - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
 

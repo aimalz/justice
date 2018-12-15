@@ -6,33 +6,7 @@ import typing
 import numpy as np
 import tensorflow as tf
 from justice import lightcurve
-
-
-def auto_dtype(key, value):
-    if isinstance(value, np.ndarray) and np.issubdtype(value.dtype, np.floating):
-        return tf.float32
-    elif isinstance(value, (float, np.floating)):
-        return tf.float32
-    elif isinstance(value, (int, np.integer)):
-        return tf.int64
-    elif '_padding' in key:
-        assert isinstance(
-            value, int
-        ) or (isinstance(value, np.ndarray) and np.issubdtype(value.dtype, np.integer))
-        return tf.int32
-    else:
-        typ = type(value.dtype)
-        raise ValueError(
-            f"Unrecognized data type for key {key!r}, value {value.dtype!r} ({typ})"
-        )
-
-
-def auto_shape(value):
-    if isinstance(value, np.ndarray):
-        return value.shape
-    else:
-        return ()
-
+from justice.features import tf_dataset_builder
 
 DatasetWithLength = collections.namedtuple(
     "DatasetWithLength", ["dataset", "num_batches", "num_non_padding"]
@@ -57,8 +31,14 @@ class PerPointDatasetGenerator(object):
         """Inefficient function to make a dataset."""
         times = np.unique(np.concatenate(lc.all_times(), axis=0))
         first_features = dict(self.extract_fcn(lc, times[0]), time=times[0])
-        dtypes = {key: auto_dtype(key, value) for key, value in first_features.items()}
-        shapes = {key: auto_shape(value) for key, value in first_features.items()}
+        dtypes = {
+            key: tf_dataset_builder.auto_dtype(key, value)
+            for key, value in first_features.items()
+        }
+        shapes = {
+            key: tf_dataset_builder.auto_shape(value)
+            for key, value in first_features.items()
+        }
         overflow = (-len(times)) % self.batch_size
 
         def gen():
@@ -83,12 +63,6 @@ class PerPointDatasetGenerator(object):
 
     def make_dataset_lcs(self, lcs: typing.List[lightcurve._LC]) -> tf.data.Dataset:
         """Inefficient function to make a dataset."""
-        first_lc_times = np.unique(np.concatenate(lcs[0].all_times(), axis=0))
-        first_features = dict(
-            self.extract_fcn(lcs[0], first_lc_times[0]), time=first_lc_times[0]
-        )
-        dtypes = {key: auto_dtype(key, value) for key, value in first_features.items()}
-        shapes = {key: auto_shape(value) for key, value in first_features.items()}
 
         def gen(lc):
             times = np.unique(np.concatenate(lc.all_times(), axis=0))
@@ -101,9 +75,7 @@ class PerPointDatasetGenerator(object):
             for lc in lcs:
                 yield from gen(lc)
 
-        return tf.data.Dataset.from_generator(
-            gen_all, output_types=dtypes, output_shapes=shapes
-        ).batch(
+        return tf_dataset_builder.dataset_from_generator_auto_dtypes(gen_all()).batch(
             self.batch_size, drop_remainder=True
         )
 
