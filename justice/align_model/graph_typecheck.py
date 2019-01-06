@@ -20,8 +20,6 @@ def assert_shape(tensor, shape):
     tensor_shape = list(map(int, tensor.shape))
     if tensor_shape != shape:
         raise ValueError(f"Expected tensor shape {shape} but got {tensor_shape}.")
-    # else:
-    #     print("Shape checks out!", shape)
     return tensor
 
 

@@ -40,6 +40,7 @@ def test_basic_similarity_model(tf_sess):
             "batch_size": 1,
             "lc_bands": plasticc_data.PlasticcDatasetLC.expected_bands,
             "window_size": 10,
+            "first_layer": "none",
         }
     )
     estimator.train(_make_test_dataset, max_steps=1)
