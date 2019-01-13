@@ -15,10 +15,10 @@ import functools
 import numpy as np
 
 from justice import lightcurve
-from justice.features import band_settings_params
+from justice.features import band_settings_params, pointwise_feature_extractor
 
 
-class RawValueExtractor(object):
+class RawValueExtractor(pointwise_feature_extractor.PointwiseFeatureExtractor):
     band_settings: band_settings_params.BandSettings
     window_size: int
 

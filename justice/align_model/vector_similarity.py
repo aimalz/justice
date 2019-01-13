@@ -25,19 +25,24 @@ class Similarity:
 
     def _normalize(self, tensor):
         if self.norm:
-            return tensor / tf.norm(tensor, ord=2, axis=1, keepdims=True)
+            return tensor / tf.maximum(
+                1e-6, tf.norm(tensor, ord=2, axis=1, keepdims=True)
+            )
         else:
             return tensor
 
     def loss(self, labels):
         graph_typecheck.assert_shape(labels, [self.batch_size])
         score = self.score()
-        return tf.losses.log_loss(labels=labels, predictions=score)
+        return tf.losses.log_loss(labels=labels, predictions=score, epsilon=1e-5)
 
     def score(self):
         left = self._normalize(self.left)
         right = self._normalize(self.right)
-        return tf.reduce_sum(left * right, axis=1)
+        dotprod = tf.reduce_sum(left * right, axis=1)
+        graph_typecheck.assert_shape(dotprod, [self.batch_size])
+        # Normalize output to between 0 and 1.
+        return 0.5 * (dotprod + 1.0)
 
     def aux_loss(self):
         if self.norm:
