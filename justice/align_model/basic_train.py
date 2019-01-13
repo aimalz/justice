@@ -148,6 +148,12 @@ def main():
         choices=["conv", "none"],
         help="Type of first layer to transform histogram or soft-one-hot inputs."
     )
+    cmd_args.add_argument(
+        "--input-soft-onehot",
+        default="sigmoid",
+        choices=["sigmoid", "gaussian"],
+        help="Types of soft-one-hot functions to use."
+    )
     args = cmd_args.parse_args()
     params = vars(args)
     params["lc_bands"] = plasticc_data.PlasticcDatasetLC.expected_bands
@@ -159,7 +165,7 @@ def main():
     def format_value(value):
         return ",".join(map(str, value)) if isinstance(value, list) else str(value)
 
-    params_string = "-".join(
+    params_string = " ".join(
         f"{key}={format_value(value)}" for key, value in sorted(params.items())
         if key not in frozenset(["train_steps", "seed"])
     )
@@ -168,10 +174,15 @@ def main():
     d = datetime.datetime.now()
     model_dir = (
         path_util.align_model_dir /
-        f"basic_model_{d.year:04d}_"
-        f"{d.month:02d}_{d.day:02d}_{d.hour:02d}.{d.minute:02d}.{d.second:02d}_{params_string}")
+        f"basic_model {d.year:04d}_"
+        f"{d.month:02d}_{d.day:02d}_{d.hour:02d}.{d.minute:02d}.{d.second:02d} {params_string}")
     assert not model_dir.exists()
 
+    print(
+        f"\nPlease run tensorboard --logdir={path_util.align_model_dir} to view progress.\n"
+    )
+
+    tf.logging.set_verbosity(tf.logging.INFO)
     estimator = tf.estimator.Estimator(
         model_fn=basic_vector_similarity_model.model_fn,
         model_dir=str(model_dir),

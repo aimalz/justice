@@ -15,6 +15,19 @@ from justice.align_model.lr_prefixing import lr_per_side_sub_model_fn
 from justice.features import dense_extracted_features
 
 
+def make_train_op(loss, params):
+    learning_rate = params.get("learning_rate", 1e-3)
+    clip_norm = params.get("clip_norm", 1.0)
+    optimizer = tf.contrib.opt.NadamOptimizer(learning_rate=learning_rate)
+    grads_and_vars = [gv for gv in optimizer.compute_gradients(
+        loss) if gv[0] is not None]
+    grads, variables = zip(*grads_and_vars)
+    grads = [tf.clip_by_norm(t, clip_norm=clip_norm) for t in grads]
+    global_step = tf.train.get_or_create_global_step()
+    train_op = optimizer.apply_gradients(zip(grads, variables), global_step=global_step)
+    return train_op
+
+
 def model_fn(features, labels, mode, params):
     del labels  # unused
     batch_size = params["batch_size"]
@@ -54,7 +67,8 @@ def model_fn(features, labels, mode, params):
         graph_typecheck.assert_shape(
             inputs, [batch_size, twice_window_size, channels, embedding_size, nbands]
         )
-        if params["first_layer"] == "conv":
+        first_layer_type = params["first_layer"]
+        if first_layer_type == "conv":
             inputs_shuffled = tf.transpose(inputs, perm=[0, 1, 4, 2, 3])
             graph_typecheck.assert_shape(
                 inputs_shuffled,
@@ -64,10 +78,10 @@ def model_fn(features, labels, mode, params):
                 tf.reshape(inputs_shuffled, [batch_size, twice_window_size, nbands, -1])
             )
             curr_layer = tf.reshape(conv_result, [batch_size, -1])
-        elif params["first_layer"] == "none":
+        elif first_layer_type == "none":
             curr_layer = tf.reshape(inputs, [batch_size, -1])
         else:
-            raise ValueError(f"No known first_layer type {params['first_layer']}")
+            raise ValueError(f"No known first_layer type {first_layer_type}")
 
         return per_side_model_keras(curr_layer)
 
@@ -75,30 +89,32 @@ def model_fn(features, labels, mode, params):
     sim = vector_similarity.Similarity(
         left, right, batch_size=batch_size, hidden_size=output_size
     )
+    sim_score = sim.score()
 
     loss = None
+    accuracy = None
     aux_loss_factor = params.get("aux_loss_factor", 0.1)
     if mode != tf.estimator.ModeKeys.PREDICT:
         labels = features["labels"]
-        sim_loss = sim.loss(labels)
+        sim_loss = sim.loss(labels, score=sim_score)
         loss = sim_loss + aux_loss_factor * sim.aux_loss()
+        accuracy = tf.metrics.accuracy(
+            labels=labels, predictions=sim.predictions(sim_score)
+        )
+        print("Adding accuracy tensor....")
+        tf.summary.scalar(
+            "per_batch_accuracy",
+            sim.per_batch_accuracy(labels, sim.predictions(sim_score))
+        )
 
     train_op = None
     if mode == tf.estimator.ModeKeys.TRAIN:
-        learning_rate = params.get("learning_rate", 1e-3)
-        clip_norm = params.get("clip_norm", 1.0)
-
-        optimizer = tf.contrib.opt.NadamOptimizer(learning_rate=learning_rate)
-        grads_and_vars = [
-            gv for gv in optimizer.compute_gradients(loss) if gv[0] is not None
-        ]
-        grads, variables = zip(*grads_and_vars)
-        grads = [tf.clip_by_norm(t, clip_norm=clip_norm) for t in grads]
-        global_step = tf.train.get_or_create_global_step()
-        train_op = optimizer.apply_gradients(
-            zip(grads, variables), global_step=global_step
-        )
+        train_op = make_train_op(loss, params)
 
     return tf.estimator.EstimatorSpec(
-        mode=mode, predictions={'score': sim.score()}, loss=loss, train_op=train_op
+        mode=mode,
+        predictions={'score': sim_score},
+        loss=loss,
+        train_op=train_op,
+        eval_metric_ops={'accuracy': accuracy}
     )
