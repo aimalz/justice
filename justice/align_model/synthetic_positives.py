@@ -5,6 +5,8 @@ import random
 import typing
 
 import numpy as np
+import tensorflow as tf
+from scipy.stats import truncnorm
 
 from justice import lightcurve
 from justice import xform
@@ -28,7 +30,9 @@ class BasicPositivesGenerator:
         translate_flux_stdev=0.01,
         dilate_time_stdev_factor=1.1,
         dilate_flux_stdev_factor=1.5,
-        rng: random.Random = None
+        rng: random.Random = None,
+        max_time_dilation = 6,
+        max_flux_dilation = 16
     ):
         self.translate_time_stdev = translate_time_stdev
         self.translate_flux_stdev = translate_flux_stdev
@@ -41,17 +45,27 @@ class BasicPositivesGenerator:
         self.log_dilate_time_stdev = math.log(dilate_time_stdev_factor)
         self.log_dilate_flux_stdev = math.log(dilate_flux_stdev_factor)
         self.rng = random.Random() if rng is None else rng
+        self.max_time_dilation = max_time_dilation
+        self.max_flux_dilation = max_flux_dilation
 
     def make_xform(self):
         translate_time = self.rng.normalvariate(0, self.translate_time_stdev)
         translate_flux = self.rng.normalvariate(0, self.translate_flux_stdev)
-        log_dilate_time = self.rng.normalvariate(0, self.log_dilate_time_stdev)
-        log_dilate_flux = self.rng.normalvariate(0, self.log_dilate_flux_stdev)
+        time_trunc = math.log(self.max_time_dilation) - self.log_dilate_time_stdev
+        flux_trunc = math.log(self.max_flux_dilation) - self.log_dilate_flux_stdev
+
+        dilations = truncnorm.rvs(
+            [-time_trunc, -flux_trunc],
+            [time_trunc, flux_trunc],
+            0,
+            [self.log_dilate_time_stdev, self.log_dilate_flux_stdev],
+            random_state=self.rng.getrandbits(32))
+
         return xform.LinearBandDataXform(
             translate_time,
             translate_flux,
-            dilate_time=math.exp(log_dilate_time),
-            dilate_flux=math.exp(log_dilate_flux),
+            dilate_time=math.exp(dilations[0]),
+            dilate_flux=math.exp(dilations[1]),
             check_positive=True,
         )
 
@@ -92,7 +106,8 @@ class RandomSubsampler(xform.BandDataXform):
         preserved = indices[preserve_mask]
         indices = indices[~preserve_mask]
         num_points = len(indices)
-        hard_min_size = min(num_points, 2)  # usually 2 but allow lower if very small
+        # usually 2 but allow lower if very small
+        hard_min_size = min(num_points, 2)
         min_size = max(hard_min_size, int(self.min_rate * num_points))
         max_size = int(math.ceil(self.max_rate * num_points))
         if min_size >= max_size:
