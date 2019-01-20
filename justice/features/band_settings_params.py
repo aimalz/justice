@@ -57,12 +57,15 @@ class BandSettings(object):
             for band_name in self.bands
         ]
 
-    def per_band_sub_model_fn_with_band_name(self, sub_model_fn, features, params):
+    def per_band_sub_model_fn_with_band_name(
+        self, sub_model_fn, features, params, **kwargs
+    ):
         return [
             sub_model_fn(
                 self.get_band_features(features, band_name),
                 band_name=band_name,
-                params=params
+                params=params,
+                **kwargs
             ) for band_name in self.bands
         ]
 

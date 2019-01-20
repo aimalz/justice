@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Extracts dense features with linear transformations."""
+import enum
 import json
 import pathlib
 import typing
@@ -207,13 +208,27 @@ class CutoffData:
             return cls(json.load(f))
 
 
+class Nonlinearity(enum.Enum):
+    SIGMOID = 1
+    GAUSSIAN = 2
+
+
+def nonlinearity_fcn(typ: Nonlinearity):
+    if typ == Nonlinearity.SIGMOID:
+        return tf.sigmoid
+    else:
+        assert typ == Nonlinearity.GAUSSIAN
+        return lambda arg: tf.exp(-arg * arg)
+
+
 def initial_layer_binned(
     initial_layer_features: tf.Tensor,
     cutoff_data: CutoffData,
     band: str,
-    nonlinearity=tf.sigmoid
+    soft_onehot: Nonlinearity = Nonlinearity.SIGMOID
 ):
     batch_size, twice_window_size, channels = map(int, initial_layer_features.shape)
+    nonlinearity = nonlinearity_fcn(soft_onehot)
     if channels == 3:
         scales = cutoff_data.dflux_dt_dflux_dtime_scales(band)
         cutoffs = cutoff_data.dflux_dt_dflux_dtime_cutoffs(band)
@@ -256,12 +271,15 @@ def initial_layer_binned_defaults(
     band: str,
     batch_size: int,
     window_size: int,
-    value_if_masked: float = 0.0
+    value_if_masked: float = 0.0,
+    soft_onehot: Nonlinearity = Nonlinearity.SIGMOID
 ):
     cutoff_data = cutoff_data_for_window_size(window_size)
     wf = WindowFeatures(band_features, batch_size=batch_size, window_size=window_size)
     init_layer = initial_layer(wf, include_flux_and_time=True)
-    binned = initial_layer_binned(init_layer, cutoff_data=cutoff_data, band=band)
+    binned = initial_layer_binned(
+        init_layer, cutoff_data=cutoff_data, band=band, soft_onehot=soft_onehot
+    )
     masked = wf.masked(
         binned,
         value_if_masked=value_if_masked,
@@ -270,7 +288,13 @@ def initial_layer_binned_defaults(
     return masked
 
 
-def per_band_model_fn(band_features, band_name, params, value_if_masked: float = 0.0):
+def per_band_model_fn(
+    band_features,
+    band_name,
+    params,
+    value_if_masked: float = 0.0,
+    soft_onehot: Nonlinearity = Nonlinearity.SIGMOID
+):
     batch_size = params["batch_size"]
     window_size = params["window_size"]
     return initial_layer_binned_defaults(
@@ -278,14 +302,19 @@ def per_band_model_fn(band_features, band_name, params, value_if_masked: float =
         band=band_name,
         batch_size=batch_size,
         window_size=window_size,
-        value_if_masked=value_if_masked
+        value_if_masked=value_if_masked,
+        soft_onehot=soft_onehot
     )
 
 
 def feature_model_fn(features, params):
     band_settings = band_settings_params.BandSettings.from_params(params)
     per_band_data = band_settings.per_band_sub_model_fn_with_band_name(
-        per_band_model_fn, features, params=params
+        per_band_model_fn,
+        features,
+        params=params,
+        value_if_masked=params.get("value_if_masked", 0.0),
+        soft_onehot=Nonlinearity[params.get("input_soft_onehot", "sigmoid").upper()]
     )
     return graph_typecheck.assert_shape(
         tf.stack(per_band_data, axis=4), [

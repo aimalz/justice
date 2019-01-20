@@ -9,10 +9,10 @@ def auto_dtype(key, value):
         return tf.float32
     elif isinstance(value, (float, np.floating)):
         return tf.float32
-    elif isinstance(value, (int, np.integer)):
-        return tf.int64
     elif isinstance(value, (bool, np.bool_)):
         return tf.bool
+    elif isinstance(value, (int, np.integer)):
+        return tf.int64
     elif '_padding' in key:
         assert isinstance(
             value, int

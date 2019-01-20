@@ -39,7 +39,11 @@ def timed_generator(iterator, name, print_every=30.0, initial_delay=1.0):
         elapsed.append(time.time() - start)
         if time.time() - last_printed > print_every:
             ntiles = np.percentile(elapsed, q=np.linspace(0, 100, 5))
-            print(f"Elapsed time percentiles for {name!r}: {ntiles} s")
+            overall_rate = len(elapsed) / sum(elapsed)
+            print(
+                f"Elapsed time percentiles for {name!r}: {ntiles} s. "
+                f"Overall rate: {overall_rate:.1f} items/s."
+            )
             last_printed = time.time()
             elapsed = []
         yield x
@@ -150,10 +154,9 @@ class NegativesDatasetBuilder(metaclass=abc.ABCMeta):
     def feature_extractor(self) -> example_pair.PairFeatureExtractor:
         raise NotImplementedError()
 
-    def lc_generator(self,
-                     ids_pairs_iterator,
-                     dataset: str) -> typing.Iterator[typing.Tuple[plasticc_data.PlasticcDatasetLC,
-                                                                   plasticc_data.PlasticcDatasetLC]]:
+    def lc_generator(self, ids_pairs_iterator, dataset: str
+                     ) -> typing.Iterator[typing.Tuple[plasticc_data.PlasticcDatasetLC,
+                                                       plasticc_data.PlasticcDatasetLC]]:
         id_pairs_chunks = sharded_plasticc.chunk_indefinite(
             ids_pairs_iterator, chunk_size=self.lc_lookup_chunk_size
         )
